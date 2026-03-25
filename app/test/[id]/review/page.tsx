@@ -68,9 +68,10 @@ function getOptionStatus(
   selectedId: number | undefined
 ): "correct" | "wrong" | "missed" | "selected" | "default" {
   const isSelected = selectedId === option.id;
-  if (option.is_correct && isSelected) return "correct";
-  if (option.is_correct && !isSelected) return "missed"; // correct but not chosen
-  if (!option.is_correct && isSelected) return "wrong"; // chosen but wrong
+  const isCorrect = !!(option as any).is_correct; // handle integer 1/0 from API
+  if (isCorrect && isSelected) return "correct";
+  if (isCorrect && !isSelected) return "missed"; // correct but not chosen
+  if (!isCorrect && isSelected) return "wrong"; // chosen but wrong
   return "default";
 }
 
@@ -106,7 +107,7 @@ function QuestionReview({
 }) {
   const isAnswered = selectedOptionId !== undefined;
   const selectedOption = question.options.find((o) => o.id === selectedOptionId);
-  const isCorrect = selectedOption?.is_correct === true;
+  const isCorrect = !!(selectedOption as any)?.is_correct; // handle integer 1/0 from API
 
   return (
     <div
@@ -195,7 +196,7 @@ function QuestionReview({
           </span>
           <span className="flex items-center gap-1">
             <span className="w-3 h-3 rounded-sm bg-green-300 inline-block" />
-            Correct answer: {question.options.find((o) => o.is_correct)?.option_label}
+            Correct answer: {question.options.find((o) => !!(o as any).is_correct)?.option_label}
           </span>
         </div>
       )}
