@@ -324,6 +324,3 @@ For questions or issues:
 4. ✅ Verify backend API is responding
 5. ✅ Ensure Node.js version is 18+
 
----
-
-**Made with ❤️ by the Development Team**
