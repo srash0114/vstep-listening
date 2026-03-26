@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { testsApi } from "@/lib/api";
 import FormInput from "@/components/FormInput";
 import Alert from "@/components/Alert";
+import { useLang } from "@/lib/lang";
 
 const DRAFT_STORAGE_KEY = "question_draft";
 const DRAFTS_LIST_KEY = "questions_drafts_list";

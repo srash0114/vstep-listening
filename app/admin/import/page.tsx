@@ -1,11 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import Link from "next/link";
 import { testsApi } from "@/lib/api";
-import Alert from "@/components/Alert";
-import FormInput from "@/components/FormInput";
+import { useLang } from "@/lib/lang";
 
 interface ImportResult {
   success: boolean;
@@ -31,13 +29,13 @@ interface AudioFiles {
 const EXAMPLE_JSON = {
   exam: {
     title: "VSTEP Listening Test 1",
-    description: "Complete listening test with 3 parts",
+    description: "Đề thi nghe đầy đủ 3 Part",
     level: "B1",
     total_duration: 35,
     parts: [
       {
         part_number: 1,
-        title: "Part 1: Announcements & Short Messages",
+        title: "Part 1: Thông báo & Tin nhắn ngắn",
         audio_url: "https://placeholder.com/part1.mp3",
         duration: 500,
         question_count: 8,
@@ -45,30 +43,14 @@ const EXAMPLE_JSON = {
           {
             question_number: 1,
             order_index: 1,
-            content: "What time will the meeting start?",
+            content: "Cuộc họp sẽ bắt đầu lúc mấy giờ?",
             difficulty_level: "3-",
-            script: "Meeting postponed to 3 PM",
+            script: "Cuộc họp dời sang 3 giờ chiều",
             options: [
-              {
-                content: "2 PM",
-                option_label: "A",
-                is_correct: false,
-              },
-              {
-                content: "3 PM",
-                option_label: "B",
-                is_correct: true,
-              },
-              {
-                content: "4 PM",
-                option_label: "C",
-                is_correct: false,
-              },
-              {
-                content: "5 PM",
-                option_label: "D",
-                is_correct: false,
-              },
+              { content: "2 giờ chiều", option_label: "A", is_correct: false },
+              { content: "3 giờ chiều", option_label: "B", is_correct: true },
+              { content: "4 giờ chiều", option_label: "C", is_correct: false },
+              { content: "5 giờ chiều", option_label: "D", is_correct: false },
             ],
           },
         ],
@@ -78,420 +60,288 @@ const EXAMPLE_JSON = {
 };
 
 const AUDIO_FIELDS = [
-  { key: "audio_part_1", label: "Part 1 Audio", required: false },
-  { key: "audio_part_2", label: "Part 2 Audio", required: false },
-  { key: "audio_part_3", label: "Part 3 Audio", required: false },
-  { key: "audio_passage_conv1", label: "Conversation 1 Audio", required: false },
-  { key: "audio_passage_conv2", label: "Conversation 2 Audio", required: false },
-  { key: "audio_passage_conv3", label: "Conversation 3 Audio", required: false },
-  { key: "audio_passage_lec1", label: "Lecture 1 Audio", required: false },
-  { key: "audio_passage_lec2", label: "Lecture 2 Audio", required: false },
-  { key: "audio_passage_lec3", label: "Lecture 3 Audio", required: false },
+  { key: "audio_part_1", label: "Audio Part 1" },
+  { key: "audio_part_2", label: "Audio Part 2" },
+  { key: "audio_part_3", label: "Audio Part 3" },
+  { key: "audio_passage_conv1", label: "Audio Hội thoại 1" },
+  { key: "audio_passage_conv2", label: "Audio Hội thoại 2" },
+  { key: "audio_passage_conv3", label: "Audio Hội thoại 3" },
+  { key: "audio_passage_lec1", label: "Audio Bài giảng 1" },
+  { key: "audio_passage_lec2", label: "Audio Bài giảng 2" },
+  { key: "audio_passage_lec3", label: "Audio Bài giảng 3" },
 ];
 
+const S = {
+  page: { background: "var(--bg-base)" } as React.CSSProperties,
+  card: { background: "var(--bg-surface)", border: "1px solid var(--border-default)" } as React.CSSProperties,
+  elevated: { background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)" } as React.CSSProperties,
+  input: { background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" } as React.CSSProperties,
+};
+
 export default function BulkImportPage() {
-  const router = useRouter();
+  const { t } = useLang();
   const [jsonText, setJsonText] = useState("");
   const [audioFiles, setAudioFiles] = useState<AudioFiles>({});
   const [loading, setLoading] = useState(false);
-  const [alert, setAlert] = useState<{
-    type: "success" | "error" | "info";
-    message: string;
-  } | null>(null);
+  const [alert, setAlert] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [showExample, setShowExample] = useState(false);
   const [uploadMode, setUploadMode] = useState<"json-only" | "with-audio">("json-only");
 
-  // ==================== File Upload Handler (JSON) ====================
   const handleJsonFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
     try {
       setLoading(true);
       const fileContent = await file.text();
       setJsonText(fileContent);
-      setAlert({
-        type: "info",
-        message: "JSON file loaded successfully. Review and click Import.",
-      });
-    } catch (error) {
-      setAlert({
-        type: "error",
-        message: "Failed to read JSON file. Make sure it's a valid JSON file.",
-      });
+      setAlert({ type: "info", message: "Đã tải file JSON. Kiểm tra và nhấn Import." });
+    } catch {
+      setAlert({ type: "error", message: "Không thể đọc file JSON." });
     } finally {
       setLoading(false);
     }
   };
 
-  // ==================== Audio File Upload Handler ====================
-  const handleAudioFileUpload = (
-    event: React.ChangeEvent<HTMLInputElement>,
-    fieldKey: string
-  ) => {
+  const handleAudioFileUpload = (event: React.ChangeEvent<HTMLInputElement>, fieldKey: string) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
-    // Validate file type
     if (!["audio/mpeg", "audio/wav", "audio/ogg", "audio/webm"].includes(file.type)) {
-      setAlert({
-        type: "error",
-        message: `Invalid audio format for ${fieldKey}. Supported: mp3, wav, ogg, webm`,
-      });
+      setAlert({ type: "error", message: `Định dạng audio không hợp lệ. Hỗ trợ: mp3, wav, ogg, webm` });
       return;
     }
-
-    // Validate file size (max 10MB)
-    const maxSize = 10 * 1024 * 1024;
-    if (file.size > maxSize) {
-      setAlert({
-        type: "error",
-        message: `Audio file too large. Max 10MB, got ${(file.size / 1024 / 1024).toFixed(1)}MB`,
-      });
+    if (file.size > 10 * 1024 * 1024) {
+      setAlert({ type: "error", message: `File audio quá lớn. Tối đa 10MB.` });
       return;
     }
-
-    setAudioFiles((prev) => ({
-      ...prev,
-      [fieldKey]: file,
-    }));
+    setAudioFiles((prev) => ({ ...prev, [fieldKey]: file }));
   };
 
-  // ==================== Validate JSON ====================
   const validateJSON = (text: string): boolean => {
-    try {
-      JSON.parse(text);
-      return true;
-    } catch {
-      return false;
-    }
+    try { JSON.parse(text); return true; } catch { return false; }
   };
 
-  // ==================== Import Handler ====================
   const handleImport = async () => {
-    if (!jsonText.trim()) {
-      setAlert({ type: "error", message: "Please paste or upload JSON data" });
-      return;
-    }
-
-    if (!validateJSON(jsonText)) {
-      setAlert({ type: "error", message: "Invalid JSON format. Please check syntax." });
-      return;
-    }
-
+    if (!jsonText.trim()) { setAlert({ type: "error", message: "Vui lòng dán hoặc tải lên dữ liệu JSON" }); return; }
+    if (!validateJSON(jsonText)) { setAlert({ type: "error", message: "Định dạng JSON không hợp lệ. Kiểm tra lại cú pháp." }); return; }
     try {
       setLoading(true);
       const data = JSON.parse(jsonText);
-
+      let response;
       if (uploadMode === "with-audio" && Object.keys(audioFiles).length > 0) {
-        // Filter out undefined audio files
-        const filteredAudioFiles = Object.entries(audioFiles)
-          .filter(([_, file]) => file !== undefined)
-          .reduce((acc, [key, file]) => {
-            acc[key] = file as File;
-            return acc;
-          }, {} as Record<string, File>);
-
-        // Call bulk import with audio uploads (multipart)
-        const response = await testsApi.bulkCreateExamWithAudio(data, filteredAudioFiles);
-
-        if (response.success) {
-          setImportResult({
-            success: true,
-            exam_id: response.data?.id || response.data?.exam_id,
-            exam_title: response.data?.title || response.data?.exam_title,
-            message: response.message,
-          });
-          setAlert({
-            type: "success",
-            message: `✓ Exam imported successfully with audio! Exam ID: ${
-              response.data?.id || response.data?.exam_id
-            }`,
-          });
-          setJsonText("");
-          setAudioFiles({});
-        } else {
-          setAlert({
-            type: "error",
-            message: response.message || "Import failed",
-          });
-        }
+        const filteredAudioFiles = Object.entries(audioFiles).filter(([_, f]) => f !== undefined).reduce((acc, [key, f]) => { acc[key] = f as File; return acc; }, {} as Record<string, File>);
+        response = await testsApi.bulkCreateExamWithAudio(data, filteredAudioFiles);
       } else {
-        // Call bulk import without audio (JSON only)
-        const response = await testsApi.bulkCreateExam(data);
-
-        if (response.success) {
-          setImportResult({
-            success: true,
-            exam_id: response.data?.id || response.data?.exam_id,
-            exam_title: response.data?.title || response.data?.exam_title,
-            message: response.message,
-          });
-          setAlert({
-            type: "success",
-            message: `✓ Exam imported successfully! Exam ID: ${
-              response.data?.id || response.data?.exam_id
-            }`,
-          });
-          setJsonText("");
-        } else {
-          setAlert({
-            type: "error",
-            message: response.message || "Import failed",
-          });
-        }
+        response = await testsApi.bulkCreateExam(data);
+      }
+      if (response.success) {
+        setImportResult({ success: true, exam_id: response.data?.id || response.data?.exam_id, exam_title: response.data?.title || response.data?.exam_title, message: response.message });
+        setAlert({ type: "success", message: `✓ Import thành công! Exam ID: ${response.data?.id || response.data?.exam_id}` });
+        setJsonText("");
+        setAudioFiles({});
+      } else {
+        setAlert({ type: "error", message: response.message || "Import thất bại" });
       }
     } catch (error: any) {
-      setAlert({
-        type: "error",
-        message:
-          error?.message || error?.error || "Failed to import exam. Please check your JSON.",
-      });
+      setAlert({ type: "error", message: error?.message || "Không thể import đề thi. Kiểm tra lại JSON." });
     } finally {
       setLoading(false);
     }
   };
 
-  // ==================== Copy Example ====================
   const copyExample = () => {
-    const jsonString = JSON.stringify(EXAMPLE_JSON, null, 2);
-    navigator.clipboard.writeText(jsonString);
-    setAlert({ type: "info", message: "Example JSON copied to clipboard!" });
+    navigator.clipboard.writeText(JSON.stringify(EXAMPLE_JSON, null, 2));
+    setAlert({ type: "info", message: "Đã copy JSON mẫu!" });
+  };
+
+  const alertColors: Record<string, { bg: string; border: string; color: string }> = {
+    success: { bg: "rgba(16,185,129,0.08)", border: "rgba(16,185,129,0.2)", color: "#34d399" },
+    error: { bg: "rgba(244,63,94,0.08)", border: "rgba(244,63,94,0.2)", color: "#fb7185" },
+    info: { bg: "rgba(124,58,237,0.08)", border: "rgba(124,58,237,0.2)", color: "#a78bfa" },
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-24 pb-12">
-      <div className="max-w-6xl mx-auto px-4">
+    <div className="min-h-screen py-10 px-4 pb-16" style={S.page}>
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
+        <Link href="/admin" className="inline-flex items-center gap-1.5 text-sm font-medium mb-6 hover:opacity-70"
+          style={{ color: "#a78bfa" }}>← Quay lại Dashboard</Link>
+
         <div className="mb-8">
-          <Link
-            href="/admin"
-            className="text-blue-600 hover:text-blue-800 font-semibold mb-4 inline-block"
-          >
-            ← Back to Admin Dashboard
-          </Link>
-          <h1 className="text-4xl font-bold text-gray-900">Bulk Import Exams</h1>
-          <p className="text-gray-600 mt-2">
-            Import complete exams with JSON and optional audio files
-          </p>
+          <h1 className="text-3xl font-black tracking-tight mb-1" style={{ color: "var(--text-primary)" }}>Import đề thi hàng loạt</h1>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>Import đề thi hoàn chỉnh bằng JSON và file audio tùy chọn</p>
         </div>
 
         {/* Alert */}
-        {alert && (
-          <Alert
-            type={alert.type}
-            message={alert.message}
-            onClose={() => setAlert(null)}
-          />
-        )}
+        {alert && (() => {
+          const ac = alertColors[alert.type] || alertColors.info;
+          return (
+            <div className="mb-6 p-4 rounded-xl text-sm flex justify-between items-start"
+              style={{ background: ac.bg, border: `1px solid ${ac.border}`, color: ac.color }}>
+              <span>{alert.message}</span>
+              <button onClick={() => setAlert(null)} className="ml-4 hover:opacity-70">✕</button>
+            </div>
+          );
+        })()}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Import Form */}
+          {/* Main form */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-lg p-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Import Exam</h2>
+            <div className="rounded-2xl p-8" style={S.card}>
+              <h2 className="text-lg font-bold mb-6" style={{ color: "var(--text-primary)" }}>Import đề thi</h2>
 
-              {/* Mode Selection */}
-              <div className="mb-6 flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    value="json-only"
-                    checked={uploadMode === "json-only"}
-                    onChange={(e) => setUploadMode(e.target.value as "json-only")}
-                    className="w-4 h-4"
-                  />
-                  <span className="text-gray-700 font-semibold">JSON Only</span>
-                  <span className="text-gray-500 text-sm">(with existing URLs)</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    value="with-audio"
-                    checked={uploadMode === "with-audio"}
-                    onChange={(e) => setUploadMode(e.target.value as "with-audio")}
-                    className="w-4 h-4"
-                  />
-                  <span className="text-gray-700 font-semibold">With Audio Upload</span>
-                  <span className="text-gray-500 text-sm">(Firebase)</span>
-                </label>
+              {/* Mode toggle */}
+              <div className="mb-6 flex gap-1.5 p-1 rounded-xl w-fit"
+                style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)" }}>
+                {[
+                  { value: "json-only", label: "JSON only" },
+                  { value: "with-audio", label: "Kèm Audio" },
+                ].map(({ value, label }) => (
+                  <button key={value} type="button" onClick={() => setUploadMode(value as any)}
+                    className="px-4 py-1.5 rounded-lg text-sm font-semibold transition-all"
+                    style={{
+                      background: uploadMode === value ? "var(--bg-surface)" : "transparent",
+                      color: uploadMode === value ? "var(--text-primary)" : "var(--text-muted)",
+                      boxShadow: uploadMode === value ? "0 1px 4px rgba(0,0,0,0.4)" : "none",
+                    }}>
+                    {label}
+                  </button>
+                ))}
               </div>
 
-              {/* JSON Section */}
+              {/* JSON section */}
               <div className="mb-8">
-                <h3 className="text-lg font-bold text-gray-900 mb-3">JSON Data</h3>
+                <h3 className="text-sm font-bold mb-3" style={{ color: "var(--text-primary)" }}>Dữ liệu JSON</h3>
 
-                {/* File Upload */}
-                <div className="mb-4">
-                  <label className="block text-sm font-semibold text-gray-700 mb-3">
-                    Upload JSON File
-                  </label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition">
-                    <input
-                      type="file"
-                      accept=".json"
-                      onChange={handleJsonFileUpload}
-                      className="hidden"
-                      id="json-file-upload"
-                      disabled={loading}
-                    />
-                    <label htmlFor="json-file-upload" className="cursor-pointer block">
-                      <div className="text-4xl mb-2">📁</div>
-                      <p className="text-gray-700 font-semibold">
-                        Click to upload or drag & drop
-                      </p>
-                      <p className="text-gray-500 text-sm">JSON format only</p>
-                    </label>
-                  </div>
+                <div
+                  className="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all mb-4"
+                  style={{ borderColor: "var(--border-default)" }}
+                  onClick={() => document.getElementById("json-file-upload")?.click()}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = "#7c3aed"}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = "var(--border-default)"}
+                >
+                  <input type="file" accept=".json" onChange={handleJsonFileUpload} className="hidden" id="json-file-upload" disabled={loading} />
+                  <div className="text-2xl mb-1">📁</div>
+                  <p className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>Click để tải file JSON</p>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>Chỉ chấp nhận định dạng JSON</p>
                 </div>
 
-                {/* Divider */}
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="flex-1 border-t border-gray-300"></div>
-                  <span className="text-gray-500 text-sm">OR</span>
-                  <div className="flex-1 border-t border-gray-300"></div>
+                  <div className="flex-1 h-px" style={{ background: "var(--border-subtle)" }} />
+                  <span className="text-xs" style={{ color: "var(--text-muted)" }}>HOẶC</span>
+                  <div className="flex-1 h-px" style={{ background: "var(--border-subtle)" }} />
                 </div>
 
-                {/* JSON Text Input */}
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
-                  Paste JSON Data
-                </label>
+                <label className="block text-xs font-semibold mb-2 uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Dán dữ liệu JSON</label>
                 <textarea
                   value={jsonText}
                   onChange={(e) => setJsonText(e.target.value)}
-                  placeholder="Paste your JSON exam data here..."
+                  placeholder="Dán dữ liệu JSON đề thi vào đây..."
                   rows={10}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-3 rounded-xl font-mono text-sm outline-none resize-none transition-all"
+                  style={S.input}
                 />
               </div>
 
-              {/* Audio Section (Conditional) */}
+              {/* Audio section */}
               {uploadMode === "with-audio" && (
-                <div className="mb-8 bg-purple-50 border border-purple-200 rounded-lg p-6">
-                  <h3 className="text-lg font-bold text-purple-900 mb-4">Audio Files (Optional)</h3>
-                  <p className="text-purple-800 text-sm mb-4">
-                    Upload MP3/WAV audio files to Firebase Storage. Max 10MB per file.
-                  </p>
-
-                  {/* Audio Upload Grid */}
-                  <div className="space-y-4">
+                <div className="mb-8 rounded-xl p-6"
+                  style={{ background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.15)" }}>
+                  <h3 className="text-sm font-bold mb-2" style={{ color: "#a78bfa" }}>File Audio (Tùy chọn)</h3>
+                  <p className="text-xs mb-4" style={{ color: "var(--text-muted)" }}>Tải lên file MP3/WAV để upload lên Firebase. Tối đa 10MB/file.</p>
+                  <div className="space-y-3">
                     {AUDIO_FIELDS.map(({ key, label }) => (
                       <div key={key}>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
                           {label}
-                          {audioFiles[key as keyof AudioFiles] && (
-                            <span className="ml-2 text-green-600 text-xs">
-                              ✓ {audioFiles[key as keyof AudioFiles]?.name}
-                            </span>
+                          {audioFiles[key] && (
+                            <span className="ml-2 font-normal" style={{ color: "#34d399" }}>✓ {audioFiles[key]?.name}</span>
                           )}
                         </label>
-                        <input
-                          type="file"
-                          accept="audio/*"
-                          onChange={(e) => handleAudioFileUpload(e, key)}
-                          className="block w-full text-sm border border-gray-300 rounded-lg p-2 cursor-pointer"
-                          disabled={loading}
-                        />
+                        <input type="file" accept="audio/*" onChange={(e) => handleAudioFileUpload(e, key)}
+                          className="block w-full text-sm rounded-lg p-2 cursor-pointer transition-all" disabled={loading}
+                          style={S.input} />
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Import Button */}
-              <button
-                onClick={handleImport}
-                disabled={loading || !jsonText.trim()}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-bold py-3 px-6 rounded-lg transition"
-              >
-                {loading ? "Importing..." : "Import Exam"}
+              {/* Import button */}
+              <button onClick={handleImport} disabled={loading || !jsonText.trim()}
+                className="w-full py-3 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 disabled:opacity-40"
+                style={{ background: "linear-gradient(135deg, #7c3aed, #06b6d4)" }}>
+                {loading ? "Đang import..." : "Import đề thi"}
               </button>
             </div>
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
+          <div className="space-y-5">
             {/* Example JSON */}
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Example JSON</h3>
+            <div className="rounded-2xl p-6" style={S.card}>
+              <h3 className="text-sm font-bold mb-3" style={{ color: "var(--text-primary)" }}>JSON mẫu</h3>
               {showExample ? (
-                <div className="bg-gray-900 text-gray-100 p-4 rounded text-xs overflow-auto max-h-96 font-mono">
+                <div className="rounded-xl p-4 text-xs overflow-auto max-h-80 font-mono"
+                  style={{ background: "var(--bg-overlay)", color: "#a78bfa" }}>
                   <pre>{JSON.stringify(EXAMPLE_JSON, null, 2)}</pre>
                 </div>
               ) : (
-                <p className="text-gray-600 text-sm">
-                  See what a complete exam JSON looks like
-                </p>
+                <p className="text-xs mb-3" style={{ color: "var(--text-muted)" }}>Xem ví dụ JSON đề thi hoàn chỉnh</p>
               )}
-              <div className="flex gap-2 mt-4">
-                <button
-                  onClick={() => setShowExample(!showExample)}
-                  className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-3 rounded text-sm transition"
-                >
-                  {showExample ? "Hide" : "Show"}
+              <div className="flex gap-2 mt-3">
+                <button onClick={() => setShowExample(!showExample)}
+                  className="flex-1 py-2 rounded-lg text-xs font-semibold transition-all hover:opacity-80"
+                  style={{ background: "var(--bg-elevated)", color: "var(--text-secondary)", border: "1px solid var(--border-default)" }}>
+                  {showExample ? "Ẩn" : "Hiện"}
                 </button>
-                <button
-                  onClick={copyExample}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-3 rounded text-sm transition"
-                >
+                <button onClick={copyExample}
+                  className="flex-1 py-2 rounded-lg text-xs font-bold text-white transition-all hover:opacity-90"
+                  style={{ background: "linear-gradient(135deg, #059669, #10b981)" }}>
                   Copy
                 </button>
               </div>
             </div>
 
-            {/* Success Result */}
+            {/* Success result */}
             {importResult?.success && (
-              <div className="bg-green-50 border-2 border-green-500 rounded-lg p-6">
-                <h3 className="text-lg font-bold text-green-900 mb-2">✓ Success!</h3>
-                <p className="text-green-800 text-sm mb-3">
-                  <strong>Exam:</strong> {importResult.exam_title}
+              <div className="rounded-2xl p-6"
+                style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.3)" }}>
+                <h3 className="font-bold mb-3" style={{ color: "#34d399" }}>✓ Import thành công!</h3>
+                <p className="text-sm mb-1" style={{ color: "var(--text-secondary)" }}>
+                  <strong>Đề thi:</strong> {importResult.exam_title}
                 </p>
-                <p className="text-green-800 text-sm mb-4">
+                <p className="text-sm mb-4" style={{ color: "var(--text-secondary)" }}>
                   <strong>Exam ID:</strong> {importResult.exam_id}
                 </p>
-                <Link
-                  href={`/admin`}
-                  className="block w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded text-center text-sm transition"
-                >
-                  Back to Dashboard
+                <Link href="/admin">
+                  <button className="w-full py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
+                    style={{ background: "linear-gradient(135deg, #059669, #10b981)" }}>
+                    Về Dashboard
+                  </button>
                 </Link>
               </div>
             )}
 
-            {/* Mode Info */}
-            <div className="bg-blue-50 border-2 border-blue-500 rounded-lg p-6">
-              <h3 className="text-lg font-bold text-blue-900 mb-3">Mode Info</h3>
+            {/* Mode info */}
+            <div className="rounded-2xl p-6" style={{ background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.15)" }}>
+              <h3 className="text-sm font-bold mb-3" style={{ color: "#a78bfa" }}>
+                {uploadMode === "json-only" ? "Chế độ: JSON only" : "Chế độ: Kèm Audio"}
+              </h3>
               {uploadMode === "json-only" ? (
-                <ul className="text-blue-800 text-sm space-y-2">
-                  <li>✓ No file uploads needed</li>
-                  <li>✓ Use existing audio URLs</li>
-                  <li>✓ Fastest option</li>
+                <ul className="text-xs space-y-1.5" style={{ color: "var(--text-secondary)" }}>
+                  <li>✓ Không cần upload file</li>
+                  <li>✓ Dùng URL audio có sẵn</li>
+                  <li>✓ Nhanh nhất</li>
                 </ul>
               ) : (
-                <ul className="text-blue-800 text-sm space-y-2">
-                  <li>✓ Upload MP3/WAV files</li>
-                  <li>✓ Auto-upload to Firebase</li>
-                  <li>✓ Max 10MB per file</li>
-                  <li>✓ All files optional</li>
+                <ul className="text-xs space-y-1.5" style={{ color: "var(--text-secondary)" }}>
+                  <li>✓ Upload file MP3/WAV</li>
+                  <li>✓ Tự động upload Firebase</li>
+                  <li>✓ Tối đa 10MB/file</li>
+                  <li>✓ Tất cả đều tùy chọn</li>
                 </ul>
               )}
-            </div>
-
-            {/* JSON Format Guide Link */}
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-3">Need Help?</h3>
-              <p className="text-gray-600 text-sm mb-4">
-                Check the format guide for complete JSON structure requirements.
-              </p>
-              <a
-                href="https://github.com/yourusername/vstep-listening/blob/main/app/admin/JSON_FORMAT_GUIDE.md"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded text-center text-sm transition"
-              >
-                View Format Guide
-              </a>
             </div>
           </div>
         </div>
@@ -499,4 +349,3 @@ export default function BulkImportPage() {
     </div>
   );
 }
-

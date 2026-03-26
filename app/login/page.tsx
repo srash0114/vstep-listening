@@ -6,189 +6,248 @@ import { useRouter } from "next/navigation";
 import { usersApi } from "@/lib/api";
 import { setStoredUser } from "@/lib/auth";
 import { validateEmail } from "@/lib/utils";
-import FormInput from "@/components/FormInput";
 import Alert from "@/components/Alert";
+import { useLang } from "@/lib/lang";
 
 export default function Login() {
   const router = useRouter();
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
+  const { t } = useLang();
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [alert, setAlert] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
-
-    if (!validateEmail(formData.email)) {
-      newErrors.email = "Please enter a valid email address";
-    }
-
-    if (!formData.password) {
-      newErrors.password = "Password is required";
-    }
-
+    if (!validateEmail(formData.email)) newErrors.email = t("Email không hợp lệ", "Invalid email");
+    if (!formData.password) newErrors.password = t("Vui lòng nhập mật khẩu", "Please enter your password");
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    if (errors[name]) {
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
-      });
-    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors((prev) => { const n = { ...prev }; delete n[name]; return n; });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
+    if (!validateForm()) return;
     try {
       setSubmitting(true);
-      
-      // Use proper login endpoint
       const response = await usersApi.login(formData.email, formData.password);
-
-      console.log("Login response:", response);
-
       if (response.success && response.data) {
-        // ⭐ Token is now in HttpOnly cookie (set by backend)
-        // Only store user info in localStorage
         setStoredUser(response.data);
-        setAlert({
-          type: "success",
-          message: "Login successful! Redirecting...",
-        });
-        setTimeout(() => {
-          router.push("/");
-        }, 1000);
+        setAlert({ type: "success", message: "Đăng nhập thành công! Đang chuyển hướng..." });
+        setTimeout(() => router.push("/"), 900);
       } else {
-        setAlert({
-          type: "error",
-          message: response.message || "Login failed. Please try again.",
-        });
+        setAlert({ type: "error", message: response.message || "Đăng nhập thất bại." });
       }
     } catch (error: any) {
-      console.error("Login error:", error);
-      
-      let errorMessage = "Login failed. Please try again.";
-      
-      // Backend returns: { success: false, error: "code", message: "text" }
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.message) {
-        // Error from API validation (thrown in api.ts)
-        errorMessage = error.message;
-      } else if (error.code === "ERR_NETWORK") {
-        errorMessage = "Network error. Could not connect to server. Make sure the backend is running on http://localhost:8000";
-      }
-
-      setAlert({
-        type: "error",
-        message: errorMessage,
-      });
+      let msg = "Đăng nhập thất bại.";
+      if (error.response?.data?.message) msg = error.response.data.message;
+      else if (error.message) msg = error.message;
+      setAlert({ type: "error", message: msg });
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center py-12 px-4 pt-32">
+    <div
+      className="min-h-screen flex items-center justify-center px-4 py-20"
+      style={{
+        background: "radial-gradient(ellipse 80% 60% at 50% -10%, rgba(124,58,237,0.18) 0%, transparent 60%), var(--bg-base)",
+      }}
+    >
+      {/* Decorative element */}
+      <div
+        className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-32 pointer-events-none"
+        style={{ background: "linear-gradient(to bottom, transparent, rgba(124,58,237,0.4), transparent)" }}
+      />
+
       <div className="w-full max-w-md">
-        {/* Card */}
-        <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl">🎧</span>
+        {/* Logo */}
+        <div className="text-center mb-10">
+          <Link href="/" className="inline-flex items-center gap-3 group">
+            <div
+              className="w-12 h-12 rounded-2xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110"
+              style={{ background: "linear-gradient(135deg, #7c3aed, #06b6d4)" }}
+            >
+              <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 3a9 9 0 0 0-9 9v4a3 3 0 0 0 3 3h1a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1H5.07A7 7 0 0 1 19 12h-1a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h1a3 3 0 0 0 3-3v-4a9 9 0 0 0-9-9z"/>
+              </svg>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">Welcome Back</h1>
-            <p className="text-gray-600 mt-2">Sign in to continue your learning journey</p>
-          </div>
+          </Link>
+          <h1
+            className="text-3xl font-black mt-6 mb-2 tracking-tight"
+            style={{ color: "var(--text-primary)" }}
+          >
+            {t("Chào mừng trở lại", "Welcome back")}
+          </h1>
+          <p style={{ color: "var(--text-muted)" }} className="text-sm">
+            {t("Tiếp tục hành trình luyện tập của bạn", "Continue your practice journey")}
+          </p>
+        </div>
+
+        {/* Card */}
+        <div
+          className="rounded-3xl p-8 relative overflow-hidden"
+          style={{
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-default)",
+            boxShadow: "0 25px 60px rgba(0,0,0,0.4)",
+          }}
+        >
+          {/* Subtle gradient corner */}
+          <div
+            className="absolute top-0 right-0 w-40 h-40 rounded-bl-[80px] pointer-events-none"
+            style={{ background: "radial-gradient(circle, rgba(124,58,237,0.06) 0%, transparent 70%)" }}
+          />
 
           {alert && (
-            <Alert
-              type={alert.type}
-              message={alert.message}
-              onClose={() => setAlert(null)}
-            />
+            <div className="mb-6">
+              <Alert type={alert.type} message={alert.message} onClose={() => setAlert(null)} />
+            </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="Enter your email"
-                className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition ${
-                  errors.email
-                    ? "border-red-500 focus:border-red-600"
-                    : "border-gray-200 focus:border-blue-500"
-                }`}
-                required
-              />
-              {errors.email && <p className="text-red-600 text-sm mt-1">{errors.email}</p>}
+          <form onSubmit={handleSubmit} className="space-y-5 relative">
+            {/* Email */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
+                Email
+              </label>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <svg className="w-4 h-4" style={{ color: "var(--text-muted)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="you@example.com"
+                  className="w-full pl-11 pr-4 py-3.5 rounded-xl text-sm outline-none transition-all duration-200"
+                  style={{
+                    background: "var(--bg-elevated)",
+                    border: `1px solid ${errors.email ? "rgba(244,63,94,0.5)" : "var(--border-default)"}`,
+                    color: "var(--text-primary)",
+                  }}
+                  onFocus={e => {
+                    (e.target as HTMLElement).style.border = errors.email
+                      ? "1px solid rgba(244,63,94,0.7)"
+                      : "1px solid rgba(124,58,237,0.5)";
+                    (e.target as HTMLElement).style.boxShadow = errors.email
+                      ? "0 0 0 3px rgba(244,63,94,0.1)"
+                      : "0 0 0 3px rgba(124,58,237,0.1)";
+                  }}
+                  onBlur={e => {
+                    (e.target as HTMLElement).style.border = errors.email ? "1px solid rgba(244,63,94,0.5)" : "1px solid var(--border-default)";
+                    (e.target as HTMLElement).style.boxShadow = "none";
+                  }}
+                />
+              </div>
+              {errors.email && <p className="text-xs" style={{ color: "#fb7185" }}>{errors.email}</p>}
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="Enter your password"
-                className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition ${
-                  errors.password
-                    ? "border-red-500 focus:border-red-600"
-                    : "border-gray-200 focus:border-blue-500"
-                }`}
-                required
-              />
-              {errors.password && <p className="text-red-600 text-sm mt-1">{errors.password}</p>}
+            {/* Password */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
+                {t("Mật khẩu", "Password")}
+              </label>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <svg className="w-4 h-4" style={{ color: "var(--text-muted)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="••••••••"
+                  className="w-full pl-11 pr-12 py-3.5 rounded-xl text-sm outline-none transition-all duration-200"
+                  style={{
+                    background: "var(--bg-elevated)",
+                    border: `1px solid ${errors.password ? "rgba(244,63,94,0.5)" : "var(--border-default)"}`,
+                    color: "var(--text-primary)",
+                  }}
+                  onFocus={e => {
+                    (e.target as HTMLElement).style.border = errors.password
+                      ? "1px solid rgba(244,63,94,0.7)"
+                      : "1px solid rgba(124,58,237,0.5)";
+                    (e.target as HTMLElement).style.boxShadow = errors.password
+                      ? "0 0 0 3px rgba(244,63,94,0.1)"
+                      : "0 0 0 3px rgba(124,58,237,0.1)";
+                  }}
+                  onBlur={e => {
+                    (e.target as HTMLElement).style.border = errors.password ? "1px solid rgba(244,63,94,0.5)" : "1px solid var(--border-default)";
+                    (e.target as HTMLElement).style.boxShadow = "none";
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 transition-colors"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    {showPassword
+                      ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                      : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    }
+                    {!showPassword && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />}
+                  </svg>
+                </button>
+              </div>
+              {errors.password && <p className="text-xs" style={{ color: "#fb7185" }}>{errors.password}</p>}
             </div>
 
+            {/* Submit */}
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg hover:from-blue-600 hover:to-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3.5 rounded-xl text-sm font-bold text-white transition-all duration-200 mt-2 relative overflow-hidden"
+              style={{
+                background: submitting
+                  ? "rgba(124,58,237,0.5)"
+                  : "linear-gradient(135deg, #7c3aed, #06b6d4)",
+                cursor: submitting ? "not-allowed" : "pointer",
+              }}
+              onMouseEnter={e => { if (!submitting) (e.currentTarget as HTMLElement).style.opacity = "0.9"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
             >
-              {submitting ? "Signing in..." : "Sign in"}
+              {submitting ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  {t("Đang đăng nhập...", "Signing in...")}
+                </span>
+              ) : t("Đăng nhập →", "Sign in →")}
             </button>
           </form>
 
           {/* Divider */}
-          <div className="my-6 relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">Don't have an account?</span>
-            </div>
+          <div className="my-7 flex items-center gap-4">
+            <div className="flex-1 h-px" style={{ background: "var(--border-subtle)" }} />
+            <span className="text-xs" style={{ color: "var(--text-muted)" }}>{t("Chưa có tài khoản?", "Don't have an account?")}</span>
+            <div className="flex-1 h-px" style={{ background: "var(--border-subtle)" }} />
           </div>
 
-          {/* Register Link */}
           <Link
             href="/register"
-            className="w-full block text-center py-3 border-2 border-blue-500 text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition"
+            className="w-full flex items-center justify-center py-3.5 rounded-xl text-sm font-semibold transition-all duration-200 hover:opacity-80"
+            style={{
+              background: "var(--bg-elevated)",
+              border: "1px solid var(--border-default)",
+              color: "var(--text-secondary)",
+            }}
           >
-            Create account
+            {t("Tạo tài khoản mới", "Create new account")}
           </Link>
         </div>
       </div>

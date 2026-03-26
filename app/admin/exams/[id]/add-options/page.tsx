@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { testsApi } from "@/lib/api";
 import { Test, Part } from "@/types";
+import { useLang } from "@/lib/lang";
 
 interface OptionForm {
   id?: string;
@@ -19,6 +20,12 @@ interface QuestionWithOptions {
   options: OptionForm[];
   passage_id?: string;
 }
+
+const S = {
+  page: { background: "var(--bg-base)" } as React.CSSProperties,
+  card: { background: "var(--bg-surface)", border: "1px solid var(--border-default)" } as React.CSSProperties,
+  elevated: { background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)" } as React.CSSProperties,
+};
 
 export default function AddOptionsPage() {
   const router = useRouter();
@@ -36,20 +43,14 @@ export default function AddOptionsPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch exam
         const examResponse = await testsApi.getById(examId);
         if (examResponse.success && examResponse.data) {
           setExam(examResponse.data);
-
-          // Fetch parts
           const partsResponse = await testsApi.getParts(examId);
           if (partsResponse.success && partsResponse.data) {
             setParts(partsResponse.data);
-            if (partsResponse.data.length > 0) {
-              setSelectedPart(partsResponse.data[0].id);
-            }
+            if (partsResponse.data.length > 0) setSelectedPart(partsResponse.data[0].id);
 
-            // Initialize questions with options
             const questionsMap: Record<string, QuestionWithOptions[]> = {};
             (partsResponse.data || []).forEach((part: any) => {
               if (part.questions && part.questions.length > 0) {
@@ -58,12 +59,7 @@ export default function AddOptionsPage() {
                   content: q.content,
                   passage_id: q.passage_id,
                   options: (q.options && q.options.length > 0)
-                    ? q.options.map((opt: any) => ({
-                        id: opt.id,
-                        content: opt.content,
-                        option_label: opt.option_label,
-                        is_correct: opt.is_correct,
-                      }))
+                    ? q.options.map((opt: any) => ({ id: opt.id, content: opt.content, option_label: opt.option_label, is_correct: opt.is_correct }))
                     : [
                         { content: "", option_label: "A", is_correct: false },
                         { content: "", option_label: "B", is_correct: false },
@@ -80,31 +76,19 @@ export default function AddOptionsPage() {
         }
         setIsLoading(false);
       } catch (err: any) {
-        setError(err.message || "Failed to load data");
+        setError(err.message || "Không thể tải dữ liệu");
         setIsLoading(false);
       }
     };
-
     fetchData();
   }, [examId]);
 
-  const handleOptionChange = (
-    partId: string,
-    questionIndex: number,
-    optionIndex: number,
-    field: keyof OptionForm,
-    value: string | boolean
-  ) => {
+  const handleOptionChange = (partId: string, questionIndex: number, optionIndex: number, field: keyof OptionForm, value: string | boolean) => {
     setQuestionsWithOptions((prev) => ({
       ...prev,
       [partId]: prev[partId].map((q, qi) =>
         qi === questionIndex
-          ? {
-              ...q,
-              options: q.options.map((opt, oi) =>
-                oi === optionIndex ? { ...opt, [field]: value } : opt
-              ),
-            }
+          ? { ...q, options: q.options.map((opt, oi) => oi === optionIndex ? { ...opt, [field]: value } : opt) }
           : q
       ),
     }));
@@ -114,54 +98,35 @@ export default function AddOptionsPage() {
     e.preventDefault();
     setError(null);
     setIsSaving(true);
-
     try {
-      // Validate & save options for each question
       for (const partId in questionsWithOptions) {
         const questionsList = questionsWithOptions[partId];
         for (const question of questionsList) {
-          // Validate: all options must have text
           if (question.options.some((opt) => !opt.content.trim())) {
-            setError("All options must have text");
+            setError("Tất cả đáp án phải có nội dung");
             setIsSaving(false);
             return;
           }
-
-          // Validate: exactly one correct answer
           const correctCount = question.options.filter((opt) => opt.is_correct).length;
           if (correctCount !== 1) {
-            setError(`Question "${question.content.substring(0, 50)}..." must have exactly 1 correct answer`);
+            setError(`Câu "${question.content.substring(0, 50)}..." phải có đúng 1 đáp án đúng`);
             setIsSaving(false);
             return;
           }
-
-          // Save each option
           for (let i = 0; i < question.options.length; i++) {
             const option = question.options[i];
-            const optionLabel = String.fromCharCode(65 + i); // A, B, C, D
-
+            const optionLabel = String.fromCharCode(65 + i);
             if (option.id) {
-              // Update existing
-              await testsApi.updateOption(examId, question.id, option.id, {
-                content: option.content,
-                option_label: optionLabel,
-                is_correct: option.is_correct,
-              });
+              await testsApi.updateOption(examId, question.id, option.id, { content: option.content, option_label: optionLabel, is_correct: option.is_correct });
             } else {
-              // Create new
-              await testsApi.createOption(examId, question.id, {
-                content: option.content,
-                option_label: optionLabel,
-                is_correct: option.is_correct,
-              });
+              await testsApi.createOption(examId, question.id, { content: option.content, option_label: optionLabel, is_correct: option.is_correct });
             }
           }
         }
       }
-
       router.push(`/admin/exams/${examId}`);
     } catch (err: any) {
-      setError(err.message || "Failed to save options");
+      setError(err.message || "Không thể lưu đáp án");
     } finally {
       setIsSaving(false);
     }
@@ -169,10 +134,11 @@ export default function AddOptionsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 pt-24">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+      <div className="min-h-screen flex items-center justify-center" style={S.page}>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 rounded-full border-2 animate-spin"
+            style={{ borderColor: "var(--border-default)", borderTopColor: "#7c3aed" }} />
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>Đang tải...</p>
         </div>
       </div>
     );
@@ -180,18 +146,16 @@ export default function AddOptionsPage() {
 
   if (!exam || parts.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 pt-24 pb-12">
-        <div className="max-w-4xl mx-auto px-4">
-          <Link href={`/admin/exams/${examId}`} className="text-blue-600 hover:text-blue-700 mb-4 inline-block">
-            ← Back to Exam
-          </Link>
-          <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">No Questions Available</h1>
-            <p className="text-gray-600 mb-6">You need to add questions first before adding options.</p>
+      <div className="min-h-screen py-10 px-4" style={S.page}>
+        <div className="max-w-4xl mx-auto">
+          <Link href={`/admin/exams/${examId}`} className="inline-flex items-center gap-1.5 text-sm font-medium mb-6 hover:opacity-70"
+            style={{ color: "#a78bfa" }}>← Quay lại đề thi</Link>
+          <div className="rounded-2xl p-8 text-center" style={S.card}>
+            <h1 className="text-xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>Chưa có câu hỏi nào</h1>
+            <p className="text-sm mb-6" style={{ color: "var(--text-muted)" }}>Vui lòng thêm câu hỏi trước khi thêm đáp án.</p>
             <Link href={`/admin/exams/${examId}/add-questions`}>
-              <button className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                Go to Add Questions
-              </button>
+              <button className="px-6 py-2.5 rounded-xl text-sm font-bold text-white"
+                style={{ background: "linear-gradient(135deg, #7c3aed, #06b6d4)" }}>Đến trang thêm câu hỏi</button>
             </Link>
           </div>
         </div>
@@ -202,56 +166,51 @@ export default function AddOptionsPage() {
   const currentPart = parts.find((p) => p.id === selectedPart);
   const currentQuestions = currentPart ? questionsWithOptions[currentPart.id] || [] : [];
   const optionLetters = ["A", "B", "C", "D"];
+  const optionColors = ["#7c3aed", "#06b6d4", "#10b981", "#f59e0b"];
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-24 pb-12">
-      <div className="max-w-5xl mx-auto px-4">
+    <div className="min-h-screen py-10 px-4 pb-16" style={S.page}>
+      <div className="max-w-5xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <Link href={`/admin/exams/${examId}`} className="text-blue-600 hover:text-blue-700 mb-4 inline-block">
-            ← Back to Exam
-          </Link>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Add Answer Options</h1>
-          <p className="text-gray-600">Step 5 of 6: Add A, B, C, D options for each question</p>
+        <Link href={`/admin/exams/${examId}`} className="inline-flex items-center gap-1.5 text-sm font-medium mb-6 hover:opacity-70"
+          style={{ color: "#a78bfa" }}>← Quay lại đề thi</Link>
+
+        <div className="mb-6">
+          <h1 className="text-3xl font-black tracking-tight mb-1" style={{ color: "var(--text-primary)" }}>Thêm Đáp án</h1>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>Bước 5/6 – Thêm đáp án A, B, C, D cho mỗi câu hỏi</p>
         </div>
 
-        {/* Progress Bar */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-2">
-            {[1, 2, 3, 4, 5, 6].map((step) => (
-              <div key={step} className={`flex-1 h-2 rounded-full ${step <= 5 ? "bg-blue-600" : "bg-gray-200"}`}></div>
-            ))}
-          </div>
-          <p className="text-sm text-gray-600">Step 5: Add Answer Options</p>
+        {/* Progress */}
+        <div className="flex gap-1.5 mb-8">
+          {[1, 2, 3, 4, 5, 6].map((s) => (
+            <div key={s} className="flex-1 h-1.5 rounded-full"
+              style={{ background: s <= 5 ? "linear-gradient(90deg,#7c3aed,#06b6d4)" : "var(--border-default)" }} />
+          ))}
         </div>
 
-        {/* Form */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mb-8">
-          {/* Sidebar - Part Selection */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+          {/* Sidebar */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-lg p-6 sticky top-32">
-              <h3 className="font-bold text-gray-900 mb-4">Parts</h3>
+            <div className="rounded-2xl p-5 sticky top-28" style={S.card}>
+              <h3 className="font-bold text-sm mb-3" style={{ color: "var(--text-primary)" }}>Các Part</h3>
               <div className="space-y-2">
                 {parts.map((part) => {
                   const partQuestions = questionsWithOptions[part.id] || [];
-                  const completeQuestions = partQuestions.filter((q) =>
-                    q.options.every((opt) => opt.content.trim()) &&
-                    q.options.some((opt) => opt.is_correct)
+                  const completeCount = partQuestions.filter((q) =>
+                    q.options.every((opt) => opt.content.trim()) && q.options.some((opt) => opt.is_correct)
                   ).length;
-
+                  const isSelected = selectedPart === part.id;
                   return (
-                    <button
-                      key={part.id}
-                      onClick={() => setSelectedPart(part.id)}
-                      className={`w-full text-left px-4 py-2 rounded-lg transition ${
-                        selectedPart === part.id
-                          ? "bg-blue-600 text-white"
-                          : "bg-gray-100 text-gray-900 hover:bg-gray-200"
-                      }`}
-                    >
-                      <div className="font-semibold">Part {part.part_number}</div>
-                      <div className="text-xs opacity-80">
-                        {completeQuestions}/{partQuestions.length} ✓
+                    <button key={part.id} onClick={() => setSelectedPart(part.id)}
+                      className="w-full text-left px-3 py-2.5 rounded-xl transition-all text-sm"
+                      style={{
+                        background: isSelected ? "linear-gradient(135deg, rgba(124,58,237,0.3), rgba(6,182,212,0.2))" : "var(--bg-elevated)",
+                        border: isSelected ? "1px solid rgba(124,58,237,0.3)" : "1px solid var(--border-subtle)",
+                        color: isSelected ? "var(--text-primary)" : "var(--text-secondary)",
+                      }}>
+                      <div className="font-semibold">Part {(part as any).part_number}</div>
+                      <div className="text-xs mt-0.5" style={{ color: isSelected ? "#a78bfa" : "var(--text-muted)" }}>
+                        {completeCount}/{partQuestions.length} ✓
                       </div>
                     </button>
                   );
@@ -260,98 +219,84 @@ export default function AddOptionsPage() {
             </div>
           </div>
 
-          {/* Main Content - Options Editor */}
+          {/* Main content */}
           <div className="lg:col-span-3">
-            <form onSubmit={handleSave} className="space-y-8">
+            <form onSubmit={handleSave} className="space-y-5">
               {error && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
-                  {error}
+                <div className="p-4 rounded-xl text-sm flex items-center justify-between"
+                  style={{ background: "rgba(244,63,94,0.08)", border: "1px solid rgba(244,63,94,0.2)", color: "#fb7185" }}>
+                  <span>{error}</span>
+                  <button type="button" onClick={() => setError(null)} className="ml-4 hover:opacity-70">✕</button>
                 </div>
               )}
 
               {currentPart && currentQuestions.length > 0 && (
-                <div className="space-y-6">
+                <div className="space-y-4">
                   {currentQuestions.map((question, questionIndex) => (
-                    <div key={question.id} className="bg-white rounded-lg shadow-lg p-6">
-                      <h3 className="font-bold text-gray-900 mb-4 pb-3 border-b border-gray-200">
-                        Question {questionIndex + 1}: {question.content}
+                    <div key={question.id} className="rounded-2xl p-6" style={S.card}>
+                      <h3 className="font-bold text-sm mb-4 pb-3" style={{ color: "var(--text-primary)", borderBottom: "1px solid var(--border-subtle)" }}>
+                        Câu {questionIndex + 1}: {question.content}
                       </h3>
 
                       <div className="space-y-3">
-                        {question.options.map((option, optionIndex) => (
-                          <div key={optionIndex} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                            {/* Option Letter */}
-                            <span className="inline-block w-8 h-8 bg-blue-100 text-blue-900 rounded-full text-center text-sm font-bold pt-1.5">
-                              {optionLetters[optionIndex]}
-                            </span>
+                        {question.options.map((option, optionIndex) => {
+                          const color = optionColors[optionIndex];
+                          return (
+                            <div key={optionIndex} className="flex items-start gap-3 p-3 rounded-xl transition-all"
+                              style={{
+                                background: option.is_correct ? `${color}15` : "var(--bg-elevated)",
+                                border: option.is_correct ? `1px solid ${color}40` : "1px solid var(--border-subtle)",
+                              }}>
+                              <span className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black shrink-0 text-white"
+                                style={{ background: option.is_correct ? color : "var(--bg-overlay)" }}>
+                                {optionLetters[optionIndex]}
+                              </span>
 
-                            {/* Option Content */}
-                            <textarea
-                              value={option.content}
-                              onChange={(e) =>
-                                handleOptionChange(
-                                  currentPart.id,
-                                  questionIndex,
-                                  optionIndex,
-                                  "content",
-                                  e.target.value
-                                )
-                              }
-                              placeholder={`Enter option ${optionLetters[optionIndex]}`}
-                              rows={2}
-                              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm resize-none"
-                            />
+                              <textarea
+                                value={option.content}
+                                onChange={(e) => handleOptionChange(currentPart.id, questionIndex, optionIndex, "content", e.target.value)}
+                                placeholder={`Nhập đáp án ${optionLetters[optionIndex]}`}
+                                rows={2}
+                                className="flex-1 px-3 py-2 rounded-lg text-sm outline-none resize-none transition-all"
+                                style={{ background: "var(--bg-overlay)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
+                              />
 
-                            {/* Correct Answer Toggle */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                // Set this as correct, unset others
-                                handleOptionChange(
-                                  currentPart.id,
-                                  questionIndex,
-                                  optionIndex,
-                                  "is_correct",
-                                  !option.is_correct
-                                );
-                                // Unset other correct answers
-                                if (!option.is_correct) {
-                                  question.options.forEach((_, i) => {
-                                    if (i !== optionIndex && question.options[i].is_correct) {
-                                      handleOptionChange(
-                                        currentPart.id,
-                                        questionIndex,
-                                        i,
-                                        "is_correct",
-                                        false
-                                      );
-                                    }
-                                  });
-                                }
-                              }}
-                              className={`px-3 py-2 rounded-lg font-semibold transition ${
-                                option.is_correct
-                                  ? "bg-green-500 hover:bg-green-600 text-white"
-                                  : "bg-gray-300 hover:bg-gray-400 text-gray-700"
-                              }`}
-                            >
-                              {option.is_correct ? "✓ Correct" : "Correct?"}
-                            </button>
-                          </div>
-                        ))}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleOptionChange(currentPart.id, questionIndex, optionIndex, "is_correct", !option.is_correct);
+                                  if (!option.is_correct) {
+                                    question.options.forEach((_, i) => {
+                                      if (i !== optionIndex && question.options[i].is_correct) {
+                                        handleOptionChange(currentPart.id, questionIndex, i, "is_correct", false);
+                                      }
+                                    });
+                                  }
+                                }}
+                                className="px-3 py-2 rounded-lg text-xs font-bold shrink-0 transition-all hover:opacity-90"
+                                style={{
+                                  background: option.is_correct ? color : "var(--bg-overlay)",
+                                  color: option.is_correct ? "white" : "var(--text-muted)",
+                                  border: option.is_correct ? `1px solid ${color}` : "1px solid var(--border-default)",
+                                }}
+                              >
+                                {option.is_correct ? "✓ Đúng" : "Đúng?"}
+                              </button>
+                            </div>
+                          );
+                        })}
                       </div>
 
-                      {/* Validation */}
-                      <div className="mt-4 text-xs">
+                      <div className="mt-4 flex gap-4 text-xs">
                         {question.options.every((opt) => opt.content.trim()) ? (
-                          <span className="text-green-700">✓ All options complete</span>
+                          <span style={{ color: "#34d399" }}>✓ Đủ 4 đáp án</span>
                         ) : (
-                          <span className="text-orange-700">⚠️ Some options are empty</span>
+                          <span style={{ color: "#fbbf24" }}>⚠ Còn đáp án trống</span>
                         )}
                         {question.options.filter((opt) => opt.is_correct).length === 1 ? (
-                          <span className="text-green-700 ml-3">✓ Has correct answer</span>
+                          <span style={{ color: "#34d399" }}>✓ Có đáp án đúng</span>
                         ) : (
-                          <span className="text-red-700 ml-3">✗ Must have 1 correct answer</span>
+                          <span style={{ color: "#fb7185" }}>✗ Cần đúng 1 đáp án đúng</span>
                         )}
                       </div>
                     </div>
@@ -360,42 +305,38 @@ export default function AddOptionsPage() {
               )}
 
               {currentPart && currentQuestions.length === 0 && (
-                <div className="bg-gray-50 rounded-lg p-8 text-center">
-                  <p className="text-gray-600 mb-4">No questions in this part yet</p>
+                <div className="rounded-2xl p-8 text-center" style={S.elevated}>
+                  <p className="text-sm mb-4" style={{ color: "var(--text-muted)" }}>Part này chưa có câu hỏi</p>
                   <Link href={`/admin/exams/${examId}/add-questions`}>
-                    <button className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                      Add Questions First
+                    <button type="button" className="px-6 py-2.5 rounded-xl text-sm font-bold text-white"
+                      style={{ background: "linear-gradient(135deg, #7c3aed, #06b6d4)" }}>
+                      Thêm câu hỏi trước
                     </button>
                   </Link>
                 </div>
               )}
 
-              {/* Form Actions */}
-              <div className="flex gap-4 pt-6 border-t border-gray-200 bg-white rounded-lg shadow-lg p-8">
-                <Link href={`/admin/exams/${examId}`} className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
-                  Cancel
+              {/* Actions */}
+              <div className="flex gap-3 rounded-2xl p-5" style={S.card}>
+                <Link href={`/admin/exams/${examId}`}>
+                  <button type="button" className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-80"
+                    style={{ border: "1px solid var(--border-default)", color: "var(--text-secondary)", background: "transparent" }}>
+                    Hủy
+                  </button>
                 </Link>
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="flex-1 px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold rounded-lg transition"
-                >
-                  {isSaving ? "Saving..." : "Save Options & Finish"}
+                <button type="submit" disabled={isSaving}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 disabled:opacity-40"
+                  style={{ background: "linear-gradient(135deg, #7c3aed, #06b6d4)" }}>
+                  {isSaving ? "Đang lưu..." : "Lưu đáp án & Hoàn thành"}
                 </button>
               </div>
             </form>
           </div>
         </div>
 
-        {/* Info Box */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="font-semibold text-blue-900 mb-2">📋 About Answer Options</h3>
-          <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-            <li>Each question must have exactly 4 options (A, B, C, D)</li>
-            <li>All 4 options must have text</li>
-            <li>Exactly one option must be marked as the correct answer</li>
-            <li>Click the <strong>Correct?</strong> button to mark an option as correct</li>
-          </ul>
+        <div className="rounded-xl p-4 text-sm"
+          style={{ background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.15)", color: "var(--text-secondary)" }}>
+          <strong style={{ color: "#a78bfa" }}>Yêu cầu:</strong> Mỗi câu hỏi cần đúng 4 đáp án (A, B, C, D) · Tất cả đáp án phải có nội dung · Chính xác 1 đáp án đúng cho mỗi câu.
         </div>
       </div>
     </div>

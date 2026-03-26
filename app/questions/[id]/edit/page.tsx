@@ -1,215 +1,39 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter, useParams } from "next/navigation";
-import { getStoredUser, isLoggedIn } from "@/lib/auth";
-import FormInput from "@/components/FormInput";
-import Textarea from "@/components/Textarea";
-import Alert from "@/components/Alert";
+import { useParams } from "next/navigation";
+import { useLang } from "@/lib/lang";
 
 export default function EditQuestion() {
-  const router = useRouter();
+  const { tx } = useLang();
   const params = useParams();
-  const questionId = parseInt(params.id as string);
-
-  const [question, setQuestion] = useState<any | null>(null);
-  const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    category: "",
-    tags: "",
-  });
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [alert, setAlert] = useState<{ type: "success" | "error"; message: string } | null>(null);
-
-  const user = getStoredUser();
-
-  useEffect(() => {
-    if (!isLoggedIn()) {
-      router.push("/login");
-      return;
-    }
-
-    fetchQuestion();
-  }, [questionId, router]);
-
-  const fetchQuestion = async () => {
-    try {
-      setLoading(true);
-      // This would need to be implemented in the API
-      // For now, we'll show a message
-      setAlert({
-        type: "error",
-        message: "Edit functionality requires API endpoint implementation",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.title.trim()) {
-      newErrors.title = "Title is required";
-    } else if (formData.title.length < 5) {
-      newErrors.title = "Title must be at least 5 characters";
-    }
-
-    if (!formData.description.trim()) {
-      newErrors.description = "Description is required";
-    } else if (formData.description.length < 20) {
-      newErrors.description = "Description must be at least 20 characters";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    if (errors[name]) {
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
-      });
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-      // Placeholder - not implemented for listening test API
-      setAlert({
-        type: "error",
-        message: "This feature is not available for the English Listening Test application",
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this question? This action cannot be undone.")) {
-      return;
-    }
-
-    // Placeholder - not implemented for listening test API
-    setAlert({
-      type: "error",
-      message: "This feature is not available for the English Listening Test application",
-    });
-  };
-
-  if (loading) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-gray-600">Loading question...</p>
-      </div>
-    );
-  }
 
   return (
-    <div className="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow">
-      <Link href={`/questions/${questionId}`} className="text-blue-600 hover:text-blue-700 mb-6 inline-block">
-        ← Back to Question
-      </Link>
-
-      <h1 className="text-3xl font-bold mb-6 text-gray-900">
-        Edit Question
-      </h1>
-
-      {alert && (
-        <Alert
-          type={alert.type}
-          message={alert.message}
-          onClose={() => setAlert(null)}
-        />
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <FormInput
-          label="Question Title"
-          type="text"
-          name="title"
-          value={formData.title}
-          onChange={handleChange}
-          placeholder="What's your question?"
-          required
-          error={errors.title}
-        />
-
-        <FormInput
-          label="Category"
-          type="text"
-          name="category"
-          value={formData.category}
-          onChange={handleChange}
-          placeholder="e.g., Web Development, Database, etc."
-          error={errors.category}
-        />
-
-        <Textarea
-          label="Description"
-          name="description"
-          value={formData.description}
-          onChange={handleChange}
-          placeholder="Provide detailed information about your question..."
-          required
-          error={errors.description}
-          rows={8}
-        />
-
-        <FormInput
-          label="Tags"
-          type="text"
-          name="tags"
-          value={formData.tags}
-          onChange={handleChange}
-          placeholder="Separate tags with commas"
-          error={errors.tags}
-        />
-
-        <div className="flex gap-4">
-          <button
-            type="submit"
-            disabled={submitting}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
-          >
-            {submitting ? "Saving..." : "Save Changes"}
-          </button>
-          <button
-            type="button"
-            onClick={handleDelete}
-            className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-          >
-            Delete Question
-          </button>
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="px-6 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition"
-          >
-            Cancel
-          </button>
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "var(--bg-base)" }}>
+      <div className="max-w-md w-full text-center">
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6"
+          style={{ background: "rgba(244,63,94,0.1)", border: "1px solid rgba(244,63,94,0.2)" }}>
+          <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: "#fb7185" }}>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+          </svg>
         </div>
-      </form>
+        <h1 className="text-2xl font-black tracking-tight mb-3" style={{ color: "var(--text-primary)" }}>
+          {tx("editQuestion")}
+        </h1>
+        <p className="text-sm mb-2" style={{ color: "var(--text-muted)" }}>
+          {tx("editQuestionUnavailable")}
+        </p>
+        <p className="text-xs mb-8" style={{ color: "var(--text-muted)" }}>
+          ID: <span className="font-mono" style={{ color: "#a78bfa" }}>{params.id}</span>
+        </p>
+        <Link href="/">
+          <button className="px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
+            style={{ background: "linear-gradient(135deg, #7c3aed, #06b6d4)" }}>
+            {tx("backHome")}
+          </button>
+        </Link>
+      </div>
     </div>
   );
 }

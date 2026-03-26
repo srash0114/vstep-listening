@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { testsApi } from "@/lib/api";
 import FormInput from "@/components/FormInput";
 import Alert from "@/components/Alert";
+import { useLang } from "@/lib/lang";
 
 interface Part {
   partNumber: number;
@@ -47,6 +48,7 @@ const VSTEP_STRUCTURE = {
 
 export default function CreateCompleteTestPage() {
   const router = useRouter();
+  const { t } = useLang();
   const [testInfo, setTestInfo] = useState({
     title: "VSTEP Listening Test",
     level: "B1",
