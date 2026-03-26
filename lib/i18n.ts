@@ -117,7 +117,6 @@ const translations = {
   examLevel: { vi: "Cấp độ", en: "Level" },
   duration: { vi: "Thời lượng", en: "Duration" },
   totalQuestions: { vi: "Tổng câu hỏi", en: "Total Questions" },
-  minutes: { vi: "phút", en: "minutes" },
 
   // Parts
   part1: { vi: "Part 1", en: "Part 1" },
@@ -136,20 +135,6 @@ const translations = {
     en: "Part 3: Lectures & Talks",
   },
 
-  // Import Pages
-  importExam: { vi: "Nhập Đề Thi", en: "Import Exam" },
-  bulkImport: { vi: "Nhập Loạt", en: "Bulk Import" },
-  aiImport: { vi: "Nhập Bằng AI", en: "AI Import" },
-
-  // Creation Pages
-  createExam: { vi: "Tạo Đề Thi", en: "Create Exam" },
-  createTest: { vi: "Tạo Bài Kiểm Tra", en: "Create Test" },
-  createQuestion: { vi: "Tạo Câu Hỏi", en: "Create Question" },
-  addPart: { vi: "Thêm Phần", en: "Add Part" },
-  addPassages: { vi: "Thêm Đoạn Văn", en: "Add Passages" },
-  addQuestions: { vi: "Thêm Câu Hỏi", en: "Add Questions" },
-  addOptions: { vi: "Thêm Lựa Chọn", en: "Add Options" },
-
   // Common Actions
   save: { vi: "Lưu", en: "Save" },
   delete: { vi: "Xóa", en: "Delete" },
@@ -159,6 +144,7 @@ const translations = {
   back: { vi: "Quay lại", en: "Back" },
   next: { vi: "Tiếp theo", en: "Next" },
   previous: { vi: "Trước đó", en: "Previous" },
+  createExam: { vi: "Tạo đề thi", en: "Create Exam" },
 
   // Test/Exam Submission
   confirmSubmission: { vi: "Xác nhận nộp bài", en: "Confirm Submission" },
