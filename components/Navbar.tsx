@@ -100,6 +100,33 @@ export default function Navbar() {
 
           {/* Right section */}
           <div className="flex items-center gap-2">
+            {/* Language toggle - always visible */}
+            <button
+              type="button"
+              onClick={toggleLang}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200"
+              style={{
+                background: "transparent",
+                border: "1px solid var(--border-subtle)",
+                color: "var(--text-muted)",
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLElement).style.borderColor = "var(--border-default)";
+                (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)";
+                (e.currentTarget as HTMLElement).style.background = "rgba(148,163,184,0.06)";
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLElement).style.borderColor = "var(--border-subtle)";
+                (e.currentTarget as HTMLElement).style.color = "var(--text-muted)";
+                (e.currentTarget as HTMLElement).style.background = "transparent";
+              }}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+              </svg>
+              <span>{lang === "vi" ? "VI" : "EN"}</span>
+            </button>
+
             {user?.isLoggedIn ? (
               <>
                 {/* User dropdown */}
@@ -160,41 +187,6 @@ export default function Navbar() {
                         </p>
                         <p className="text-sm font-semibold truncate" style={{ color: "var(--text-primary)" }}>{user.username}</p>
 
-                        {/* Language toggle */}
-                        <button
-                          type="button"
-                          onClick={toggleLang}
-                          className="mt-2.5 flex items-center gap-2 w-full px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-                          style={{
-                            background: "var(--bg-overlay)",
-                            border: "1px solid var(--border-default)",
-                            color: "var(--text-secondary)",
-                          }}
-                          onMouseEnter={e => {
-                            (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,58,237,0.4)";
-                            (e.currentTarget as HTMLElement).style.color = "#a78bfa";
-                          }}
-                          onMouseLeave={e => {
-                            (e.currentTarget as HTMLElement).style.borderColor = "var(--border-default)";
-                            (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)";
-                          }}
-                        >
-                          <span className="text-base leading-none">{lang === "vi" ? "🇻🇳" : "🇺🇸"}</span>
-                          <span style={{ color: "var(--text-muted)" }}>Ngôn ngữ:</span>
-                          <span
-                            className="ml-auto px-2 py-0.5 rounded-md text-[10px] font-black tracking-widest"
-                            style={{
-                              background: "linear-gradient(135deg, rgba(124,58,237,0.2), rgba(6,182,212,0.2))",
-                              color: "#a78bfa",
-                              border: "1px solid rgba(124,58,237,0.25)",
-                            }}
-                          >
-                            {lang === "vi" ? "VI" : "EN"}
-                          </span>
-                          <svg className="w-3.5 h-3.5 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                          </svg>
-                        </button>
                       </div>
 
                       {[
