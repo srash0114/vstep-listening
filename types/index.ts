@@ -92,10 +92,12 @@ export interface User {
   username: string;
   email: string;
   fullName?: string;
+  role?: string;
   createdAt?: string;
   lastLogin?: string;
   isActive?: boolean;
   isLoggedIn?: boolean;
+  isAdmin?: boolean;
   token?: string;
 }
 

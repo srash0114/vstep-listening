@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { testsApi } from "@/lib/api";
+import { testsApi, userExamsApi } from "@/lib/api";
 import { useLang } from "@/lib/lang";
+import { useAuth } from "@/lib/auth-context";
+import { CachedAudio } from "@/components/CachedAudio";
 
 // ==================== Types ====================
 interface Option {
@@ -127,7 +129,7 @@ function QuestionCard({
           className="mb-4 p-3 rounded-xl"
           style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)" }}
         >
-          <audio controls src={question.audio_url} className="w-full h-9" />
+          <CachedAudio src={question.audio_url} className="w-full h-9" />
         </div>
       )}
 
@@ -212,12 +214,25 @@ export default function TestPage() {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [unansweredForConfirm, setUnansweredForConfirm] = useState(0);
+  const [userExamId, setUserExamId] = useState<number | null>(null);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const { user, isLoading: authLoading } = useAuth();
 
   useEffect(() => {
-    testsApi.getFullStructure(examId)
-      .then((res) => {
-        const data = res?.data;
+    if (authLoading) return;
+    if (!user) {
+      setShowLoginPrompt(true);
+      setIsLoading(false);
+      return;
+    }
+    Promise.all([
+      userExamsApi.start(examId),
+      testsApi.getForTaking(examId),
+    ])
+      .then(([startRes, examRes]) => {
+        setUserExamId(startRes?.data?.id ?? null);
+        const data = examRes?.data;
         if (!data) throw new Error(t("Không tìm thấy đề thi", "Exam not found"));
         setExam(data);
         const duration = data.total_duration
@@ -227,7 +242,7 @@ export default function TestPage() {
       })
       .catch((err: any) => setError(err?.message || t("Không tải được đề thi", "Failed to load exam")))
       .finally(() => setIsLoading(false));
-  }, [examId]);
+  }, [examId, authLoading, user]);
 
   useEffect(() => {
     if (timeLeft === null || submitted) return;
@@ -236,34 +251,43 @@ export default function TestPage() {
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [timeLeft, submitted]);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [selectedPart]);
+
   const orderedQuestions = useMemo(() => (exam ? buildOrderedQuestions(exam) : []), [exam]);
   const globalNumMap = useMemo(() => (exam ? buildGlobalNumMap(exam) : new Map<number, number>()), [exam]);
 
   const handleAnswer = (questionId: number, optionId: number) => {
     if (submitted) return;
     setAnswers((prev) => ({ ...prev, [questionId]: optionId }));
+    if (userExamId) {
+      userExamsApi.saveAnswer(userExamId, questionId, optionId).catch(() => {});
+    }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (submitted) return;
     const totalDuration = exam
       ? (exam.total_duration ? exam.total_duration * 60 : (exam.parts || []).reduce((s: number, p: Part) => s + (p.duration || 0), 0))
       : 0;
-    const elapsed = timeLeft !== null ? totalDuration - timeLeft : undefined;
+    const elapsed = timeLeft !== null ? totalDuration - timeLeft : 0;
     if (timerRef.current) clearTimeout(timerRef.current);
     setSubmitted(true);
-    let correct = 0;
-    orderedQuestions.forEach((q) => {
-      const selId = answers[q.id];
-      if (!selId) return;
-      const opt = q.options?.find((o) => o.id === selId);
-      if ((opt as any)?.is_correct) correct++;
-    });
-    const finalScore = { correct, total: orderedQuestions.length };
-    setScore(finalScore);
-    try {
-      sessionStorage.setItem(`review_${examId}`, JSON.stringify({ answers, score: finalScore, timeSpent: elapsed }));
-    } catch {}
+    if (userExamId) {
+      try {
+        const res = await userExamsApi.submit(userExamId, elapsed);
+        const d = res?.data;
+        setScore({ correct: d.correct_answers, total: d.total_questions });
+        try {
+          sessionStorage.setItem(`review_${examId}`, JSON.stringify({ userExamId, timeSpent: d.time_spent }));
+        } catch {}
+      } catch {
+        setScore({ correct: 0, total: orderedQuestions.length });
+      }
+    } else {
+      setScore({ correct: 0, total: orderedQuestions.length });
+    }
   };
 
   const answeredCount = Object.keys(answers).length;
@@ -288,6 +312,50 @@ export default function TestPage() {
           <div className="w-12 h-12 rounded-full border-2 animate-spin"
             style={{ borderColor: "var(--border-default)", borderTopColor: "#7c3aed" }} />
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>{t("Đang tải đề thi...", "Loading exam...")}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (showLoginPrompt) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "var(--bg-base)" }}>
+        <div
+          className="w-full max-w-sm rounded-3xl p-8 text-center"
+          style={{
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-default)",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
+          }}
+        >
+          <div
+            className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-5"
+            style={{ background: "rgba(124,58,237,0.12)", border: "1px solid rgba(124,58,237,0.2)" }}
+          >
+            🔒
+          </div>
+          <h2 className="text-lg font-black mb-2" style={{ color: "var(--text-primary)" }}>
+            {t("Vui lòng đăng nhập", "Login required")}
+          </h2>
+          <p className="text-sm mb-7" style={{ color: "var(--text-muted)" }}>
+            {t("Vui lòng đăng nhập để có thể làm bài test nhé", "Please log in to take this test")}
+          </p>
+          <div className="flex flex-col gap-3">
+            <Link
+              href="/login"
+              className="w-full py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
+              style={{ background: "linear-gradient(135deg, #7c3aed, #06b6d4)" }}
+            >
+              {t("Đăng nhập", "Log in")}
+            </Link>
+            <Link
+              href="/"
+              className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all"
+              style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)", color: "var(--text-secondary)" }}
+            >
+              {t("Đã hiểu", "Got it")}
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -384,13 +452,17 @@ export default function TestPage() {
                 style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-secondary)" }}>
                 ← {t("Về nhà", "Home")}
               </Link>
-              <Link href={`/test/${examId}/review`}
+              <Link href={`/test/${examId}/review${userExamId ? `?ueid=${userExamId}` : ""}`}
                 className="px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
                 style={{ background: "linear-gradient(135deg, #7c3aed, #06b6d4)" }}>
                 {t("Xem đáp án →", "View answers →")}
               </Link>
               <button
-                onClick={() => {
+                onClick={async () => {
+                  try {
+                    const startRes = await userExamsApi.start(examId);
+                    setUserExamId(startRes?.data?.id ?? null);
+                  } catch {}
                   setSubmitted(false); setAnswers({}); setSelectedPart(0); setScore(null);
                   setTimeLeft(exam.total_duration ? exam.total_duration * 60
                     : (exam.parts || []).reduce((s: number, p: Part) => s + (p.duration || 0), 0) || null);
@@ -628,7 +700,7 @@ export default function TestPage() {
                       <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--text-muted)" }}>
                         Audio Part
                       </p>
-                      <audio controls src={currentPart.audio_url} className="w-full h-10" />
+                      <CachedAudio src={currentPart.audio_url} className="w-full h-10" />
                     </div>
                   )}
                 </div>
@@ -685,7 +757,7 @@ export default function TestPage() {
                             </div>
                             {passage.audio_url && (
                               <div className="mt-3">
-                                <audio controls src={passage.audio_url} className="w-full h-10" />
+                                <CachedAudio src={passage.audio_url} className="w-full h-10" />
                               </div>
                             )}
                           </div>

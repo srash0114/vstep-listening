@@ -137,6 +137,25 @@ export const testsApi = {
   },
 
   /**
+   * Get exam content for taking (no is_correct, script, difficulty)
+   * GET /v1/exams/{id}?for_taking=1
+   */
+  getForTaking: async (id: number | string): Promise<any> => {
+    const response = await api.get(`/v1/exams/${id}`, { params: { for_taking: 1 } });
+    return response.data;
+  },
+
+  /**
+    * Get test history for a user (GET /v1/users/exams/history)
+    * Returns list of tests taken by the user with scores and dates
+    * Requires authentication (cookie-based)
+    */
+  getUserHistory: async (): Promise<UserResultsHistoryResponse> => {  
+    const response = await api.get<UserResultsHistoryResponse>("/v1/users/exams/history");
+    return response.data;
+  },
+
+  /**
    * Create new exam (Admin only)
    * POST /v1/admin/exams
    */
@@ -912,6 +931,42 @@ export const resultsApi = {
     const response = await api.get<StatisticsResponse>("/results/stats", {
       params: testId ? { testId } : undefined,
     });
+    return response.data;
+  },
+};
+
+// ==================== User Exams API ====================
+export const userExamsApi = {
+  /** POST /v1/exams/{examId}/start → returns { data: { id, user_id, exam_id, ... } } */
+  start: async (examId: number | string): Promise<any> => {
+    const response = await api.post(`/v1/exams/${examId}/start`);
+    return response.data;
+  },
+
+  /** POST /v1/user-exams/{userExamId}/answer */
+  saveAnswer: async (userExamId: number, questionId: number, selectedOptionId: number): Promise<any> => {
+    const response = await api.post(`/v1/user-exams/${userExamId}/answer`, {
+      question_id: questionId,
+      selected_option_id: selectedOptionId,
+    });
+    return response.data;
+  },
+
+  /** POST /v1/user-exams/{userExamId}/submit */
+  submit: async (userExamId: number, timeSpent: number): Promise<any> => {
+    const response = await api.post(`/v1/user-exams/${userExamId}/submit`, { time_spent: timeSpent });
+    return response.data;
+  },
+
+  /** GET /v1/user-exams/{userExamId}/result */
+  getResult: async (userExamId: number): Promise<any> => {
+    const response = await api.get(`/v1/user-exams/${userExamId}/result`);
+    return response.data;
+  },
+
+  /** DELETE /v1/user-exams/{userExamId} */
+  delete: async (userExamId: number): Promise<any> => {
+    const response = await api.delete(`/v1/user-exams/${userExamId}`);
     return response.data;
   },
 };

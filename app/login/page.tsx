@@ -41,7 +41,7 @@ export default function Login() {
       if (response.success && response.data) {
         setStoredUser(response.data);
         setAlert({ type: "success", message: "Đăng nhập thành công! Đang chuyển hướng..." });
-        setTimeout(() => router.push("/"), 900);
+        setTimeout(() => window.location.href = "/", 900);
       } else {
         setAlert({ type: "error", message: response.message || "Đăng nhập thất bại." });
       }

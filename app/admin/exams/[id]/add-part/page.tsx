@@ -6,6 +6,7 @@ import Link from "next/link";
 import { testsApi } from "@/lib/api";
 import { Test } from "@/types";
 import { useLang } from "@/lib/lang";
+import { CachedAudio } from "@/components/CachedAudio";
 
 interface PartForm {
   part_number: number;
@@ -389,7 +390,7 @@ export default function AddPartPage() {
                         {part.audio_url && (
                           <div className="mt-3">
                             <p className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>Xem trước:</p>
-                            <audio controls src={part.audio_url} className="w-full h-9" style={{ filter: "invert(0.85) hue-rotate(180deg)" }} />
+                            <CachedAudio src={part.audio_url} className="w-full h-9" style={{ filter: "invert(0.85) hue-rotate(180deg)" }} />
                           </div>
                         )}
                       </div>

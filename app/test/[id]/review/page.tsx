@@ -1,24 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { testsApi } from "@/lib/api";
+import { testsApi, userExamsApi } from "@/lib/api";
 import { useLang } from "@/lib/lang";
+import { CachedAudio } from "@/components/CachedAudio";
 
 // ==================== Types ====================
 interface Option {
   id: number;
   option_label: string;
   content: string;
-  is_correct: boolean;
 }
 
 interface Question {
   id: number;
   question_number: number;
   content: string;
-  script?: string;
   audio_url?: string;
   options: Option[];
 }
@@ -27,7 +26,6 @@ interface Passage {
   id: number;
   title: string;
   audio_url?: string;
-  script?: string;
   passage_order: number;
   questions: Question[];
 }
@@ -48,10 +46,20 @@ interface Exam {
   parts: Part[];
 }
 
-interface ReviewSession {
-  answers: Record<number, number>;
-  score: { correct: number; total: number };
-  timeSpent?: number;
+interface ResultAnswer {
+  question_id: number;
+  question_content: string;
+  script?: string;
+  selected_option: { id: number; option_label: string; content: string } | null;
+  correct_option: { id: number; option_label: string; content: string };
+  is_correct: boolean;
+}
+
+interface ResultData {
+  id: number;
+  score: number;
+  performance_level: string;
+  answers: ResultAnswer[];
 }
 
 // ==================== Helpers ====================
@@ -64,9 +72,10 @@ function formatTime(seconds: number) {
 
 type OptionStatus = "correct" | "wrong" | "missed" | "default";
 
-function getOptionStatus(option: Option, selectedId: number | undefined): OptionStatus {
-  const isSelected = selectedId === option.id;
-  const isCorrect = !!(option as any).is_correct;
+function getOptionStatus(option: Option, resultAnswer?: ResultAnswer): OptionStatus {
+  if (!resultAnswer) return "default";
+  const isSelected = resultAnswer.selected_option?.id === option.id;
+  const isCorrect = resultAnswer.correct_option?.id === option.id;
   if (isCorrect && isSelected) return "correct";
   if (isCorrect && !isSelected) return "missed";
   if (!isCorrect && isSelected) return "wrong";
@@ -116,14 +125,13 @@ function ScriptBlock({ script, label = "Script / Transcript" }: { script: string
 
 // ==================== QuestionReview ====================
 function QuestionReview({
-  question, selectedOptionId, globalNumber,
+  question, resultAnswer, globalNumber,
 }: {
-  question: Question; selectedOptionId: number | undefined; globalNumber: number;
+  question: Question; resultAnswer?: ResultAnswer; globalNumber: number;
 }) {
   const { t } = useLang();
-  const isAnswered = selectedOptionId !== undefined;
-  const selectedOption = question.options.find((o) => o.id === selectedOptionId);
-  const isCorrect = !!(selectedOption as any)?.is_correct;
+  const isAnswered = !!resultAnswer?.selected_option;
+  const isCorrect = !!resultAnswer?.is_correct;
 
   let borderColor = "var(--border-subtle)";
   let bg = "var(--bg-surface)";
@@ -140,16 +148,13 @@ function QuestionReview({
 
   const STATUS_STYLE: Record<OptionStatus, { bg: string; border: string; color: string; labelBg: string; labelColor: string }> = {
     correct: { bg: "rgba(16,185,129,0.1)", border: "rgba(16,185,129,0.35)", color: "#10b981", labelBg: "rgba(16,185,129,0.2)", labelColor: "#10b981" },
-    wrong: { bg: "rgba(244,63,94,0.1)", border: "rgba(244,63,94,0.35)", color: "#fb7185", labelBg: "rgba(244,63,94,0.2)", labelColor: "#fb7185" },
-    missed: { bg: "rgba(16,185,129,0.05)", border: "rgba(16,185,129,0.2)", color: "#6ee7b7", labelBg: "rgba(16,185,129,0.12)", labelColor: "#6ee7b7" },
+    wrong:   { bg: "rgba(244,63,94,0.1)",  border: "rgba(244,63,94,0.35)",  color: "#fb7185", labelBg: "rgba(244,63,94,0.2)",  labelColor: "#fb7185" },
+    missed:  { bg: "rgba(16,185,129,0.05)", border: "rgba(16,185,129,0.2)", color: "#6ee7b7", labelBg: "rgba(16,185,129,0.12)", labelColor: "#6ee7b7" },
     default: { bg: "transparent", border: "var(--border-subtle)", color: "var(--text-muted)", labelBg: "var(--bg-elevated)", labelColor: "var(--text-muted)" },
   };
 
   return (
-    <div
-      className="rounded-2xl p-5"
-      style={{ background: bg, border: `1px solid ${borderColor}` }}
-    >
+    <div className="rounded-2xl p-5" style={{ background: bg, border: `1px solid ${borderColor}` }}>
       <div className="flex items-start gap-3 mb-4">
         <span
           className="shrink-0 w-8 h-8 rounded-xl text-sm font-black flex items-center justify-center"
@@ -177,13 +182,13 @@ function QuestionReview({
 
       {question.audio_url && (
         <div className="mb-3 p-3 rounded-xl" style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)" }}>
-          <audio controls src={question.audio_url} className="w-full h-9" />
+          <CachedAudio src={question.audio_url} className="w-full h-9" />
         </div>
       )}
 
       <div className="space-y-2">
         {[...question.options].sort((a, b) => a.option_label.localeCompare(b.option_label)).map((option) => {
-          const status = getOptionStatus(option, selectedOptionId);
+          const status = getOptionStatus(option, resultAnswer);
           const s = STATUS_STYLE[status];
           return (
             <div
@@ -198,31 +203,29 @@ function QuestionReview({
                 {option.option_label}
               </span>
               <span className="flex-1" style={{ color: s.color }}>{option.content}</span>
-              {(status === "correct" || status === "missed") && (
-                <span className="shrink-0 text-emerald-400 font-bold">✓</span>
-              )}
-              {status === "wrong" && (
-                <span className="shrink-0 text-rose-400 font-bold">✗</span>
-              )}
+              {(status === "correct" || status === "missed") && <span className="shrink-0 text-emerald-400 font-bold">✓</span>}
+              {status === "wrong" && <span className="shrink-0 text-rose-400 font-bold">✗</span>}
             </div>
           );
         })}
       </div>
 
-      {isAnswered && !isCorrect && selectedOption && (
+      {isAnswered && !isCorrect && resultAnswer?.selected_option && resultAnswer?.correct_option && (
         <div className="mt-3 flex flex-wrap gap-3 text-xs" style={{ color: "var(--text-muted)" }}>
           <span className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded-sm inline-block" style={{ background: "rgba(244,63,94,0.3)" }} />
-            {t("Bạn chọn:", "Your choice:")} {selectedOption.option_label}
+            {t("Bạn chọn:", "Your choice:")} {resultAnswer.selected_option.option_label}
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded-sm inline-block" style={{ background: "rgba(16,185,129,0.3)" }} />
-            {t("Đáp án:", "Answer:")} {question.options.find((o) => !!(o as any).is_correct)?.option_label}
+            {t("Đáp án:", "Answer:")} {resultAnswer.correct_option.option_label}
           </span>
         </div>
       )}
 
-      {question.script && <ScriptBlock script={question.script} label={t("Giải thích / Script", "Explanation / Script")} />}
+      {resultAnswer?.script && (
+        <ScriptBlock script={resultAnswer.script} label={t("Giải thích / Script", "Explanation / Script")} />
+      )}
     </div>
   );
 }
@@ -230,35 +233,53 @@ function QuestionReview({
 // ==================== Main Page ====================
 export default function ReviewPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const examId = params.id as string;
   const { t } = useLang();
 
   const [exam, setExam] = useState<Exam | null>(null);
-  const [session, setSession] = useState<ReviewSession | null>(null);
+  const [resultData, setResultData] = useState<ResultData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activePart, setActivePart] = useState(0);
   const [showLegend, setShowLegend] = useState(true);
+  const [timeSpent, setTimeSpent] = useState<number | undefined>(undefined);
 
   useEffect(() => {
-    const raw = sessionStorage.getItem(`review_${examId}`);
-    if (!raw) {
+    const ueidParam = searchParams.get("ueid");
+    const ueid = ueidParam
+      ? parseInt(ueidParam)
+      : (() => {
+          try {
+            const raw = sessionStorage.getItem(`review_${examId}`);
+            return raw ? JSON.parse(raw)?.userExamId : null;
+          } catch { return null; }
+        })();
+
+    if (!ueid) {
       setError(t("Không tìm thấy kết quả. Vui lòng làm bài trước.", "No results found. Please take the test first."));
       setIsLoading(false);
       return;
     }
-    try { setSession(JSON.parse(raw)); } catch {
-      setError(t("Không thể tải dữ liệu kết quả.", "Failed to load result data."));
-      setIsLoading(false);
-      return;
-    }
-    testsApi.getFullStructure(examId)
-      .then((res) => {
-        const data = res?.data;
-        if (!data) throw new Error(t("Không tìm thấy đề thi", "Exam not found"));
-        setExam(data);
+
+    try {
+      const raw = sessionStorage.getItem(`review_${examId}`);
+      if (raw) setTimeSpent(JSON.parse(raw)?.timeSpent);
+    } catch {}
+
+    Promise.all([
+      userExamsApi.getResult(ueid),
+      testsApi.getForTaking(examId),
+    ])
+      .then(([resultRes, examRes]) => {
+        const rd = resultRes?.data;
+        const ed = examRes?.data;
+        if (!rd) throw new Error(t("Không tải được kết quả", "Failed to load result"));
+        if (!ed) throw new Error(t("Không tìm thấy đề thi", "Exam not found"));
+        setResultData(rd);
+        setExam(ed);
       })
-      .catch((err: any) => setError(err?.message || t("Không tải được đề thi", "Failed to load exam")))
+      .catch((err: any) => setError(err?.message || t("Không tải được kết quả", "Failed to load result")))
       .finally(() => setIsLoading(false));
   }, [examId]);
 
@@ -271,7 +292,7 @@ export default function ReviewPage() {
     );
   }
 
-  if (error || !exam || !session) {
+  if (error || !exam || !resultData) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg-base)" }}>
         <div className="text-center">
@@ -286,8 +307,12 @@ export default function ReviewPage() {
     );
   }
 
-  const { answers, score } = session;
-  const percentage = score.total > 0 ? Math.round((score.correct / score.total) * 100) : 0;
+  const resultAnswers = new Map<number, ResultAnswer>(
+    resultData.answers.map((a) => [a.question_id, a])
+  );
+  const correctCount = resultData.answers.filter((a) => a.is_correct).length;
+  const totalCount = resultData.answers.length;
+  const percentage = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0;
   const isExcellent = percentage >= 80;
   const isGood = percentage >= 60;
   const scoreColor = isExcellent ? "#10b981" : isGood ? "#f59e0b" : "#f43f5e";
@@ -301,13 +326,7 @@ export default function ReviewPage() {
 
   const getPartScore = (part: Part) => {
     const qs = getPartQuestions(part);
-    let correct = 0;
-    qs.forEach(({ question }) => {
-      const selId = answers[question.id];
-      if (!selId) return;
-      const opt = question.options.find((o) => o.id === selId);
-      if (opt?.is_correct) correct++;
-    });
+    const correct = qs.filter(({ question }) => resultAnswers.get(question.id)?.is_correct ?? false).length;
     return { correct, total: qs.length };
   };
 
@@ -353,27 +372,18 @@ export default function ReviewPage() {
         >
           <div
             className="absolute inset-0 pointer-events-none"
-            style={{
-              background: `radial-gradient(ellipse 60% 80% at 0% 50%, ${scoreColor}12 0%, transparent 60%)`,
-            }}
+            style={{ background: `radial-gradient(ellipse 60% 80% at 0% 50%, ${scoreColor}12 0%, transparent 60%)` }}
           />
           <div className="relative flex flex-wrap items-center gap-6">
-            {/* Score */}
             <div className="text-center min-w-[90px]">
-              <div
-                className="text-5xl font-black"
-                style={{ color: scoreColor }}
-              >
-                {percentage}%
-              </div>
+              <div className="text-5xl font-black" style={{ color: scoreColor }}>{percentage}%</div>
               <div className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
-                {score.correct}/{score.total} {t("đúng", "correct")}
+                {correctCount}/{totalCount} {t("đúng", "correct")}
               </div>
             </div>
 
             <div className="w-px h-14 hidden sm:block" style={{ background: "var(--border-subtle)" }} />
 
-            {/* Per-part */}
             <div className="flex flex-wrap gap-3 flex-1">
               {sortedParts.map((part, idx) => {
                 const ps = getPartScore(part);
@@ -388,20 +398,13 @@ export default function ReviewPage() {
                       background: isActive ? "rgba(124,58,237,0.15)" : "var(--bg-elevated)",
                       border: `1px solid ${isActive ? "rgba(124,58,237,0.35)" : "var(--border-subtle)"}`,
                     }}
-                    onMouseEnter={e => {
-                      if (!isActive) (e.currentTarget as HTMLElement).style.border = "1px solid var(--border-default)";
-                    }}
-                    onMouseLeave={e => {
-                      if (!isActive) (e.currentTarget as HTMLElement).style.border = "1px solid var(--border-subtle)";
-                    }}
+                    onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.border = "1px solid var(--border-default)"; }}
+                    onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.border = "1px solid var(--border-subtle)"; }}
                   >
                     <div className="text-xs font-bold uppercase mb-0.5" style={{ color: "var(--text-muted)" }}>
                       Part {part.part_number}
                     </div>
-                    <div
-                      className="text-xl font-black"
-                      style={{ color: pct >= 80 ? "#10b981" : pct >= 60 ? "#f59e0b" : "#f43f5e" }}
-                    >
+                    <div className="text-xl font-black" style={{ color: pct >= 80 ? "#10b981" : pct >= 60 ? "#f59e0b" : "#f43f5e" }}>
                       {ps.correct}/{ps.total}
                     </div>
                     <div className="text-xs" style={{ color: "var(--text-muted)" }}>{pct}%</div>
@@ -410,17 +413,14 @@ export default function ReviewPage() {
               })}
             </div>
 
-            {session.timeSpent !== undefined && (
+            {timeSpent !== undefined && (
               <div className="text-center">
-                <div className="text-lg font-bold" style={{ color: "var(--text-secondary)" }}>
-                  {formatTime(session.timeSpent)}
-                </div>
+                <div className="text-lg font-bold" style={{ color: "var(--text-secondary)" }}>{formatTime(timeSpent)}</div>
                 <div className="text-xs" style={{ color: "var(--text-muted)" }}>{t("Thời gian", "Time")}</div>
               </div>
             )}
           </div>
 
-          {/* Performance banner */}
           <div
             className="mt-5 rounded-xl px-4 py-3 text-sm font-medium text-center"
             style={{
@@ -446,15 +446,12 @@ export default function ReviewPage() {
             <span className="font-bold" style={{ color: "var(--text-secondary)" }}>{t("Chú thích:", "Legend:")}</span>
             {[
               { bg: "rgba(16,185,129,0.1)", border: "rgba(16,185,129,0.35)", label: t("Đúng (bạn chọn)", "Correct (your choice)") },
-              { bg: "rgba(244,63,94,0.1)", border: "rgba(244,63,94,0.35)", label: t("Sai (bạn chọn)", "Wrong (your choice)") },
+              { bg: "rgba(244,63,94,0.1)",  border: "rgba(244,63,94,0.35)",  label: t("Sai (bạn chọn)", "Wrong (your choice)") },
               { bg: "rgba(16,185,129,0.05)", border: "rgba(16,185,129,0.2)", label: t("Đáp án đúng (chưa chọn)", "Correct answer (not chosen)") },
               { bg: "transparent", border: "var(--border-subtle)", label: t("Đáp án khác", "Other option") },
             ].map(({ bg, border, label }) => (
               <span key={label} className="flex items-center gap-1.5" style={{ color: "var(--text-muted)" }}>
-                <span
-                  className="w-4 h-4 rounded-md inline-block"
-                  style={{ background: bg, border: `1px solid ${border}` }}
-                />
+                <span className="w-4 h-4 rounded-md inline-block" style={{ background: bg, border: `1px solid ${border}` }} />
                 {label}
               </span>
             ))}
@@ -511,9 +508,7 @@ export default function ReviewPage() {
                 {currentPartScore.total > 0 ? Math.round((currentPartScore.correct / currentPartScore.total) * 100) : 0}%
               </p>
             </div>
-            {currentPart.audio_url && (
-              <audio controls src={currentPart.audio_url} className="h-9 max-w-xs" />
-            )}
+            {currentPart.audio_url && <CachedAudio src={currentPart.audio_url} className="h-9 max-w-xs" />}
           </div>
         </div>
 
@@ -523,7 +518,12 @@ export default function ReviewPage() {
             [...(currentPart.questions || [])]
               .sort((a, b) => (a.question_number || 0) - (b.question_number || 0))
               .map((q, qi) => (
-                <QuestionReview key={q.id} question={q} selectedOptionId={answers[q.id]} globalNumber={qi + 1} />
+                <QuestionReview
+                  key={q.id}
+                  question={q}
+                  resultAnswer={resultAnswers.get(q.id)}
+                  globalNumber={qi + 1}
+                />
               ))
           ) : (
             (() => {
@@ -549,10 +549,7 @@ export default function ReviewPage() {
                           {passage.title || t(`Đoạn ${passage.passage_order}`, `Passage ${passage.passage_order}`)}
                         </h3>
                         {passage.audio_url && (
-                          <audio controls src={passage.audio_url} className="mt-2 w-full h-9" />
-                        )}
-                        {passage.script && (
-                          <ScriptBlock script={passage.script} label={t("Script hội thoại / bài nghe", "Dialogue / Listening script")} />
+                          <CachedAudio src={passage.audio_url} className="mt-2 w-full h-9" />
                         )}
                       </div>
                       <div className="p-5 space-y-5">
@@ -560,8 +557,9 @@ export default function ReviewPage() {
                           counter++;
                           return (
                             <QuestionReview
-                              key={q.id} question={q}
-                              selectedOptionId={answers[q.id]}
+                              key={q.id}
+                              question={q}
+                              resultAnswer={resultAnswers.get(q.id)}
                               globalNumber={counter}
                             />
                           );
