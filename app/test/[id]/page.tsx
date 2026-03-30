@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { testsApi, userExamsApi } from "@/lib/api";
+import { testsApi, userExamsApi, API_BASE_URL } from "@/lib/api";
 import { useLang } from "@/lib/lang";
 import { useAuth } from "@/lib/auth-context";
 import { CachedAudio } from "@/components/CachedAudio";
@@ -101,6 +101,7 @@ function QuestionCard({
 
   return (
     <div
+      id={`question-${question.id}`}
       className="rounded-2xl p-5 transition-all duration-200"
       style={{
         background: "var(--bg-surface)",
@@ -216,8 +217,22 @@ export default function TestPage() {
   const [unansweredForConfirm, setUnansweredForConfirm] = useState(0);
   const [userExamId, setUserExamId] = useState<number | null>(null);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [showExitModal, setShowExitModal] = useState(false);
+  const [isResuming, setIsResuming] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  // Refs for access in event handlers (avoid stale closures)
+  const answersRef = useRef<Record<number, number>>({});
+  const timeLeftRef = useRef<number | null>(null);
+  const userExamIdRef = useRef<number | null>(null);
+  const totalDurationRef = useRef<number>(0);
+  const submittedRef = useRef(false);
   const { user, isLoading: authLoading } = useAuth();
+
+  // Keep refs in sync
+  useEffect(() => { answersRef.current = answers; }, [answers]);
+  useEffect(() => { timeLeftRef.current = timeLeft; }, [timeLeft]);
+  useEffect(() => { userExamIdRef.current = userExamId; }, [userExamId]);
+  useEffect(() => { submittedRef.current = submitted; }, [submitted]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -231,14 +246,39 @@ export default function TestPage() {
       testsApi.getForTaking(examId),
     ])
       .then(([startRes, examRes]) => {
-        setUserExamId(startRes?.data?.id ?? null);
+        const ueid = startRes?.data?.id ?? null;
+        setUserExamId(ueid);
         const data = examRes?.data;
         if (!data) throw new Error(t("Không tìm thấy đề thi", "Exam not found"));
         setExam(data);
-        const duration = data.total_duration
+
+        const totalDuration = data.total_duration
           ? data.total_duration * 60
           : (data.parts || []).reduce((sum: number, p: Part) => sum + (p.duration || 0), 0);
-        setTimeLeft(duration || null);
+        totalDurationRef.current = totalDuration;
+
+        // Resume previous attempt
+        if (startRes?.message === "Resuming existing exam" && startRes?.data) {
+          const prev = startRes.data;
+          // Restore answers
+          if (Array.isArray(prev.answers) && prev.answers.length > 0) {
+            const restored: Record<number, number> = {};
+            prev.answers.forEach((a: any) => {
+              if (a.selected_option_id != null) restored[a.question_id] = a.selected_option_id;
+            });
+            setAnswers(restored);
+          }
+          // Restore remaining time
+          if (prev.time_spent != null && totalDuration > 0) {
+            setTimeLeft(Math.max(0, totalDuration - prev.time_spent));
+          } else {
+            setTimeLeft(totalDuration || null);
+          }
+          setIsResuming(true);
+          setTimeout(() => setIsResuming(false), 4000);
+        } else {
+          setTimeLeft(totalDuration || null);
+        }
       })
       .catch((err: any) => setError(err?.message || t("Không tải được đề thi", "Failed to load exam")))
       .finally(() => setIsLoading(false));
@@ -254,6 +294,64 @@ export default function TestPage() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [selectedPart]);
+
+  // Auto-save silently on browser close/reload (no native dialog)
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (submittedRef.current || !userExamIdRef.current) return;
+      const elapsed = timeLeftRef.current !== null
+        ? totalDurationRef.current - timeLeftRef.current
+        : totalDurationRef.current;
+      const payload = JSON.stringify({
+        time_spent: Math.max(0, elapsed),
+        answers: Object.entries(answersRef.current).map(([qId, optId]) => ({
+          question_id: parseInt(qId),
+          selected_option_id: optId,
+        })),
+      });
+      fetch(`${API_BASE_URL}/api/v1/user-exams/${userExamIdRef.current}/pause`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: payload,
+        keepalive: true,
+        credentials: "include",
+      });
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
+
+  // Intercept browser back button → show custom exit modal instead
+  useEffect(() => {
+    // Push a dummy state so popstate fires when user presses Back
+    window.history.pushState(null, "", window.location.href);
+    const handlePopState = () => {
+      if (submittedRef.current || !userExamIdRef.current) return;
+      // Push back again to keep user on the page while modal is shown
+      window.history.pushState(null, "", window.location.href);
+      setShowExitModal(true);
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  const handlePauseAndExit = async () => {
+    if (userExamIdRef.current) {
+      const elapsed = timeLeftRef.current !== null
+        ? totalDurationRef.current - timeLeftRef.current
+        : totalDurationRef.current;
+      try {
+        await userExamsApi.pause(userExamIdRef.current, {
+          time_spent: Math.max(0, elapsed),
+          answers: Object.entries(answersRef.current).map(([qId, optId]) => ({
+            question_id: parseInt(qId),
+            selected_option_id: optId,
+          })),
+        });
+      } catch {}
+    }
+    router.push("/");
+  };
 
   const orderedQuestions = useMemo(() => (exam ? buildOrderedQuestions(exam) : []), [exam]);
   const globalNumMap = useMemo(() => (exam ? buildGlobalNumMap(exam) : new Map<number, number>()), [exam]);
@@ -508,7 +606,10 @@ export default function TestPage() {
 
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <Link href="/" className="transition-colors text-xs shrink-0 flex items-center gap-1.5"
+            <button
+              type="button"
+              onClick={() => submitted ? router.push("/") : setShowExitModal(true)}
+              className="transition-colors text-xs shrink-0 flex items-center gap-1.5"
               style={{ color: "var(--text-muted)" }}
               onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)"}
               onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"}
@@ -517,7 +618,7 @@ export default function TestPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
               {t("Thoát", "Exit")}
-            </Link>
+            </button>
             <span style={{ color: "var(--border-strong)" }}>│</span>
             <h1 className="font-semibold text-sm truncate" style={{ color: "var(--text-primary)" }}>{exam.title}</h1>
           </div>
@@ -829,6 +930,81 @@ export default function TestPage() {
           </div>
         </div>
       </div>
+
+      {/* Resume banner */}
+      {isResuming && (
+        <div
+          className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2.5 px-5 py-3 rounded-2xl text-sm font-medium shadow-2xl"
+          style={{ background: "rgba(124,58,237,0.92)", color: "#fff", backdropFilter: "blur(12px)" }}
+        >
+          <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          {t("Đang tiếp tục bài làm trước của bạn...", "Resuming your previous attempt...")}
+        </div>
+      )}
+
+      {/* Exit / Pause Modal */}
+      {showExitModal && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(10px)" }}
+          onClick={() => setShowExitModal(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-3xl p-8 text-center"
+            style={{
+              background: "var(--bg-surface)",
+              border: "1px solid var(--border-default)",
+              boxShadow: "0 30px 80px rgba(0,0,0,0.5)",
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div
+              className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-5"
+              style={{ background: "rgba(124,58,237,0.12)", border: "1px solid rgba(124,58,237,0.2)" }}
+            >
+              <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: "#a78bfa" }}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-black mb-2" style={{ color: "var(--text-primary)" }}>
+              {t("Bạn muốn thoát?", "Leave the exam?")}
+            </h2>
+            <p className="text-sm mb-7" style={{ color: "var(--text-muted)" }}>
+              {t(
+                "Lưu lại tiến trình để tiếp tục bài làm sau. Câu trả lời và thời gian sẽ được giữ nguyên.",
+                "Save your progress to resume later. Your answers and remaining time will be preserved."
+              )}
+            </p>
+            <div className="flex flex-col gap-2.5">
+              <button
+                onClick={handlePauseAndExit}
+                className="w-full py-3 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
+                style={{ background: "linear-gradient(135deg, #7c3aed, #06b6d4)" }}
+              >
+                {t("Lưu & Thoát", "Save & Exit")}
+              </button>
+              <button
+                onClick={() => router.push("/")}
+                className="w-full py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-80"
+                style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-secondary)" }}
+              >
+                {t("Thoát không lưu", "Exit without saving")}
+              </button>
+              <button
+                onClick={() => setShowExitModal(false)}
+                className="text-sm py-2 transition-colors"
+                style={{ color: "var(--text-muted)" }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)"}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"}
+              >
+                {t("Tiếp tục làm bài", "Continue exam")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Submit Confirmation Modal */}
       {showSubmitModal && (

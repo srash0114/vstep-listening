@@ -41,42 +41,62 @@ export default function AddOptionsPage() {
   const [selectedPart, setSelectedPart] = useState<string | null>(null);
 
   useEffect(() => {
+    const buildOptions = (existingOptions: any[]): OptionForm[] =>
+      ["A", "B", "C", "D"].map((label, i) => {
+        const ex = existingOptions?.find((o: any) => o.option_label === label) ?? existingOptions?.[i];
+        return {
+          id: ex?.id ? String(ex.id) : undefined,
+          content: ex?.content || "",
+          option_label: label,
+          is_correct: ex ? Boolean(ex.is_correct) : false,
+        };
+      });
+
     const fetchData = async () => {
       try {
-        const examResponse = await testsApi.getById(examId);
-        if (examResponse.success && examResponse.data) {
-          setExam(examResponse.data);
-          const partsResponse = await testsApi.getParts(examId);
-          if (partsResponse.success && partsResponse.data) {
-            setParts(partsResponse.data);
-            if (partsResponse.data.length > 0) setSelectedPart(partsResponse.data[0].id);
+        const examResponse = await testsApi.AdminGetById(examId);
+        const examData = examResponse.data as any;
 
-            const questionsMap: Record<string, QuestionWithOptions[]> = {};
-            (partsResponse.data || []).forEach((part: any) => {
-              if (part.questions && part.questions.length > 0) {
-                questionsMap[part.id] = part.questions.map((q: any) => ({
-                  id: q.id,
-                  content: q.content,
-                  passage_id: q.passage_id,
-                  options: (q.options && q.options.length > 0)
-                    ? q.options.map((opt: any) => ({ id: opt.id, content: opt.content, option_label: opt.option_label, is_correct: opt.is_correct }))
-                    : [
-                        { content: "", option_label: "A", is_correct: false },
-                        { content: "", option_label: "B", is_correct: false },
-                        { content: "", option_label: "C", is_correct: false },
-                        { content: "", option_label: "D", is_correct: false },
-                      ],
-                }));
-              } else {
-                questionsMap[part.id] = [];
-              }
+        setExam(examData);
+
+        const rawParts: any[] = examData?.parts || [];
+        setParts(rawParts.map((p: any) => ({ ...p, id: String(p.id) })));
+
+        const qwo: Record<string, QuestionWithOptions[]> = {};
+        for (const part of rawParts) {
+          const partId = String(part.id);
+          const questions: QuestionWithOptions[] = [];
+
+          // Part 1: direct questions
+          for (const q of part.questions || []) {
+            questions.push({
+              id: String(q.id),
+              content: q.content,
+              passage_id: q.passage_id ? String(q.passage_id) : undefined,
+              options: buildOptions(q.options || []),
             });
-            setQuestionsWithOptions(questionsMap);
           }
+
+          // Parts 2/3: questions inside passages
+          for (const passage of part.passages || []) {
+            for (const q of passage.questions || []) {
+              questions.push({
+                id: String(q.id),
+                content: q.content,
+                passage_id: String(passage.id),
+                options: buildOptions(q.options || []),
+              });
+            }
+          }
+
+          qwo[partId] = questions;
         }
-        setIsLoading(false);
+
+        setQuestionsWithOptions(qwo);
+        if (rawParts.length > 0) setSelectedPart(String(rawParts[0].id));
       } catch (err: any) {
         setError(err.message || "Không thể tải dữ liệu");
+      } finally {
         setIsLoading(false);
       }
     };

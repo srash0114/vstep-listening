@@ -121,6 +121,23 @@ export const testsApi = {
 
   /**
    * Get specific exam with all details
+   * GET /v1/admin/exams/{id}
+   */
+  AdminGetById: async (id: number | string): Promise<TestDetailResponse> => {
+    if (!id || (typeof id === "number" && id <= 0)) {
+      throw {
+        success: false,
+        error: "invalid_request",
+        message: "Invalid exam ID",
+        statusCode: 400,
+      };
+    }
+    const response = await api.get<TestDetailResponse>(`/v1/admin/exams/${id}`);
+    return response.data;
+  },
+
+  /**
+   * Get specific exam with all details
    * GET /v1/exams/{id}
    */
   getById: async (id: number | string): Promise<TestDetailResponse> => {
@@ -243,7 +260,7 @@ export const testsApi = {
         statusCode: 400,
       };
     }
-    const response = await api.get(`/v1/exams/${examId}`);
+    const response = await api.get(`/v1/admin/exams/${examId}`);
     const raw = response.data?.data;
     // data can be the exam object (with .parts) or the array directly
     const parts = raw?.parts || (Array.isArray(raw) ? raw : []);
@@ -961,6 +978,15 @@ export const userExamsApi = {
   /** GET /v1/user-exams/{userExamId}/result */
   getResult: async (userExamId: number): Promise<any> => {
     const response = await api.get(`/v1/user-exams/${userExamId}/result`);
+    return response.data;
+  },
+
+  /** POST /v1/user-exams/{userExamId}/pause */
+  pause: async (
+    userExamId: number,
+    data: { time_spent: number; answers: { question_id: number; selected_option_id: number | null }[] }
+  ): Promise<any> => {
+    const response = await api.post(`/v1/user-exams/${userExamId}/pause`, data);
     return response.data;
   },
 
