@@ -69,13 +69,9 @@ export default function Navbar() {
 
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 shrink-0 group">
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 group-hover:scale-110"
-              style={{ background: "linear-gradient(135deg, #7c3aed, #06b6d4)" }}
-            >
-              <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 3a9 9 0 0 0-9 9v4a3 3 0 0 0 3 3h1a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1H5.07A7 7 0 0 1 19 12h-1a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h1a3 3 0 0 0 3-3v-4a9 9 0 0 0-9-9z"/>
-              </svg>
+            <div className="w-8 h-8 rounded-lg overflow-hidden transition-all duration-300 group-hover:scale-110 shrink-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/icon.png" alt="VSTEP" width={32} height={32} className="w-8 h-8 object-contain" />
             </div>
             <div className="leading-none">
               <span className="font-bold text-sm tracking-tight" style={{ color: "var(--text-primary)" }}>VSTEP</span>
@@ -90,7 +86,7 @@ export default function Navbar() {
             <button
               type="button"
               onClick={toggleLang}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-200"
               style={{
                 background: "transparent",
                 border: "1px solid var(--border-subtle)",
@@ -260,7 +256,7 @@ export default function Navbar() {
               <>
                 <Link
                   href="/login"
-                  className="text-sm font-medium px-4 py-2 rounded-lg transition-all duration-200"
+                  className="text-sm font-medium px-2 py-2 rounded-lg transition-all duration-200"
                   style={{ color: "var(--text-secondary)" }}
                   onMouseEnter={e => {
                     (e.currentTarget as HTMLElement).style.color = "var(--text-primary)";
