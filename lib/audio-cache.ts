@@ -1,6 +1,30 @@
 const CACHE_NAME = "vstep-audio-v1";
 
 /**
+ * Deletes a cached entry and re-fetches from origin, replacing the stale cache.
+ */
+export async function recacheAudioUrl(url: string): Promise<string | null> {
+  if (!url || typeof window === "undefined" || !("caches" in window)) return null;
+
+  try {
+    const cache = await caches.open(CACHE_NAME);
+    await cache.delete(url);
+
+    const response = await fetch(url, { cache: "reload" });
+    if (!response.ok) return null;
+
+    // Clone before consuming: one for cache, one for blob
+    const clone = response.clone();
+    await cache.put(url, clone);
+
+    const blob = await response.blob();
+    return URL.createObjectURL(blob);
+  } catch {}
+
+  return null;
+}
+
+/**
  * Returns a blob URL if the audio is already cached locally,
  * otherwise returns null (caller should use original URL).
  *
