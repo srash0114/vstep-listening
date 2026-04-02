@@ -91,7 +91,7 @@ export interface User {
   id: number;
   username: string;
   email: string;
-  fullName?: string;
+  full_name?: string;
   role?: string;
   createdAt?: string;
   lastLogin?: string;
@@ -99,6 +99,9 @@ export interface User {
   isLoggedIn?: boolean;
   isAdmin?: boolean;
   token?: string;
+  has_password?: boolean;
+  has_google?: boolean;
+  avatar_url: string;
 }
 
 export interface UserResultsHistory {

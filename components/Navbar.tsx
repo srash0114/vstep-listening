@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useLang } from "@/lib/lang";
 import { usersApi } from "@/lib/api";
+import Avatar from "@/components/Avatar";
 
 export default function Navbar() {
   const router = useRouter();
@@ -134,15 +135,10 @@ export default function Navbar() {
                     }}
                   >
                     {/* Avatar */}
-                    <div
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0"
-                      style={{ background: "linear-gradient(135deg, #7c3aed, #06b6d4)", color: "#fff" }}
-                    >
-                      {initials}
-                    </div>
-                    <span className="hidden sm:inline text-sm font-medium max-w-[100px] truncate"
+                    <Avatar src={user.avatar_url} initials={initials} size="sm" />
+                    <span className="hidden sm:inline text-sm font-medium max-w-[200px] truncate"
                       style={{ color: "var(--text-primary)" }}>
-                      {user.username}
+                      {user.full_name ? user.full_name : user.username}
                     </span>
                     <svg
                       className={`w-3.5 h-3.5 transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`}
@@ -177,7 +173,11 @@ export default function Navbar() {
                           icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                         },
                         {
-                          href: "/profile", label: lang === "vi" ? "Kết quả của tôi" : "My Results",
+                          href: "/profile", label: lang === "vi" ? "Hồ sơ của tôi" : "My Profile",
+                          icon: <><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7v1.5a.5.5 0 00.5.5h13a.5.5 0 00.5-.5V21a7 7 0 00-7-7z" /></>
+                        },
+                        {
+                          href: "/results", label: lang === "vi" ? "Kết quả của tôi" : "My Results",
                           icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                         },
                         ...(user.isAdmin ? [{

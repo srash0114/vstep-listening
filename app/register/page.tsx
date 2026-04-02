@@ -12,7 +12,7 @@ export default function Register() {
   const router = useRouter();
   const { t } = useLang();
   const [formData, setFormData] = useState({
-    username: "", email: "", password: "", confirmPassword: "",
+    username: "", email: "", full_name: "", password: "", confirmPassword: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -22,6 +22,7 @@ export default function Register() {
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
     if (!formData.username.trim()) newErrors.username = t("Tên đăng nhập là bắt buộc", "Username is required");
+    if (!formData.full_name.trim()) newErrors.full_name = t("Tên đầy đủ là bắt buộc", "Full name is required");
     if (!validateEmail(formData.email)) newErrors.email = t("Email không hợp lệ", "Invalid email");
     const pwv = validatePassword(formData.password);
     if (!pwv.valid) newErrors.password = pwv.message || "";
@@ -41,7 +42,7 @@ export default function Register() {
     if (!validateForm()) return;
     try {
       setSubmitting(true);
-      const response = await usersApi.register(formData.username, formData.email, formData.password);
+      const response = await usersApi.register(formData.username, formData.email, formData.full_name, formData.password);
       if (response.success && response.data) {
         setAlert({ type: "success", message: "Tài khoản đã được tạo! Đang chuyển đến trang đăng nhập..." });
         setTimeout(() => router.push("/login"), 1500);
@@ -89,13 +90,9 @@ export default function Register() {
         {/* Logo */}
         <div className="text-center mb-10">
           <Link href="/" className="inline-flex items-center gap-3 group">
-            <div
-              className="w-12 h-12 rounded-2xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110"
-              style={{ background: "linear-gradient(135deg, #7c3aed, #06b6d4)" }}
-            >
-              <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 3a9 9 0 0 0-9 9v4a3 3 0 0 0 3 3h1a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1H5.07A7 7 0 0 1 19 12h-1a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h1a3 3 0 0 0 3-3v-4a9 9 0 0 0-9-9z"/>
-              </svg>
+            <div className="w-12 h-12 rounded-2xl overflow-hidden transition-transform duration-300 group-hover:scale-110">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/icon.png" alt="VSTEP" width={48} height={48} className="w-12 h-12 object-contain" />
             </div>
           </Link>
           <h1
@@ -135,6 +132,10 @@ export default function Register() {
               {
                 name: "username", label: t("Tên đăng nhập", "Username"), type: "text", placeholder: t("Chọn tên đăng nhập", "Choose a username"),
                 icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />,
+              },
+              {
+                name: "full_name", label: t("Tên đầy đủ", "Full Name"), type: "text", placeholder: t("Nguyễn Văn A", "John Doe"),
+                icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />,
               },
               {
                 name: "email", label: "Email", type: "email", placeholder: "you@example.com",

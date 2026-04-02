@@ -1020,6 +1020,7 @@ export const usersApi = {
   register: async (
     username: string,
     email: string,
+    full_name: string,
     password: string
   ): Promise<ApiResponse<User>> => {
     // Validation
@@ -1028,6 +1029,14 @@ export const usersApi = {
         success: false,
         error: "invalid_request",
         message: "Username must be at least 3 characters",
+        statusCode: 400,
+      };
+    }
+    if (!full_name || full_name.trim().length < 2) {
+      throw {
+        success: false,
+        error: "invalid_request",
+        message: "Full name is required",
         statusCode: 400,
       };
     }
@@ -1051,6 +1060,7 @@ export const usersApi = {
     const response = await api.post<ApiResponse<User>>("/users/register", {
       username,
       email,
+      full_name,
       password,
     });
     return response.data;
@@ -1060,29 +1070,19 @@ export const usersApi = {
    * Login user
    * POST /users/login
    */
-  login: async (email: string, password: string): Promise<ApiResponse<User>> => {
-    // Validation
-    if (!email || !email.includes("@")) {
-      throw {
-        success: false,
-        error: "invalid_request",
-        message: "Invalid email address",
-        statusCode: 400,
-      };
+  login: async (identifier: string, password: string, mode: "email" | "username" = "email"): Promise<ApiResponse<User>> => {
+    if (!identifier) {
+      throw { success: false, error: "invalid_request", message: "Vui lòng nhập email hoặc tên đăng nhập", statusCode: 400 };
     }
     if (!password) {
-      throw {
-        success: false,
-        error: "invalid_request",
-        message: "Password is required",
-        statusCode: 400,
-      };
+      throw { success: false, error: "invalid_request", message: "Password is required", statusCode: 400 };
     }
 
-    const response = await api.post<ApiResponse<User>>("/users/login", {
-      email,
-      password,
-    });
+    const payload = mode === "email"
+      ? { email: identifier, password }
+      : { username: identifier, password };
+
+    const response = await api.post<ApiResponse<User>>("/users/login", payload);
     return response.data;
   },
 
@@ -1150,6 +1150,57 @@ export const usersApi = {
    */
   logout: async (): Promise<ApiResponse<any>> => {
     const response = await api.post<ApiResponse<any>>("/users/logout", {});
+    return response.data;
+  },
+
+  /**
+   * Update user profile
+   * PUT /users/profile
+   * 
+   * ⭐ HttpOnly cookie is automatically sent with credentials
+   * Updates username and/or full_name (both optional)
+   * 
+   * @param updates - Object containing optional username and/or full_name
+   * @returns Updated user data
+   */
+  updateProfile: async (updates: {
+    username?: string;
+    full_name?: string;
+  }): Promise<ApiResponse<User>> => {
+    // Validation
+    if (updates.username !== undefined && updates.username.trim().length < 3) {
+      throw {
+        success: false,
+        error: "invalid_request",
+        message: "Username must be at least 3 characters",
+        statusCode: 400,
+      };
+    }
+
+    const response = await api.put<ApiResponse<User>>("/users/profile", updates);
+    return response.data;
+  },
+
+  /**
+   * Update or set password
+   * PUT /users/password
+   * - has_password=true: { current_password, new_password }
+   * - has_password=false (Google user): { new_password }
+   */
+  updatePassword: async (payload: {
+    current_password?: string;
+    new_password: string;
+  }): Promise<ApiResponse<any>> => {
+    const response = await api.put<ApiResponse<any>>("/users/password", payload);
+    return response.data;
+  },
+
+  /**
+   * Unlink Google account (only when has_password = true)
+   * POST /users/unlink-google
+   */
+  unlinkGoogle: async (): Promise<ApiResponse<any>> => {
+    const response = await api.post<ApiResponse<any>>("/users/unlink-google", {});
     return response.data;
   },
 };
