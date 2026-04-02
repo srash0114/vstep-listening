@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { usersApi, API_BASE_URL,  } from "@/lib/api";
 import { useLang } from "@/lib/lang";
@@ -8,7 +8,7 @@ import { useAuth } from "@/lib/auth-context";
 import Toast, { ToastType } from "@/components/Toast";
 import Avatar from "@/components/Avatar";
 
-export default function Profile() {
+function ProfileContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useLang();
@@ -779,5 +779,13 @@ export default function Profile() {
         />
       )}
     </div>
+  );
+}
+
+export default function Profile() {
+  return (
+    <Suspense>
+      <ProfileContent />
+    </Suspense>
   );
 }
