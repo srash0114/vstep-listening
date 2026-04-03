@@ -188,7 +188,7 @@ export default function MyResults() {
               </div>
               {/* Stats overview */}
         {history && (
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
             {[
               { value: history.totalTests.toString(), label: t("Đề đã làm", "Tests taken"), icon: "📋", color: "#7c3aed", bg: "rgba(124,58,237,0.1)" },
               { value: `${history.averageScore.toFixed(1)}%`, label: t("Điểm TB", "Avg score"), icon: "🎯", color: "#06b6d4", bg: "rgba(6,182,212,0.1)" },
@@ -196,12 +196,12 @@ export default function MyResults() {
             ].map((stat) => (
               <div
                 key={stat.label}
-                className="rounded-2xl p-5 text-center"
+                className="rounded-2xl p-2 sm:p-5 text-center min-w-0"
                 style={{ background: stat.bg, border: `1px solid ${stat.bg.replace("0.1", "0.2")}` }}
               >
-                <div className="text-2xl mb-1">{stat.icon}</div>
-                <div className="text-2xl font-black mb-0.5" style={{ color: stat.color }}>{stat.value}</div>
-                <div className="text-xs" style={{ color: "var(--text-muted)" }}>{stat.label}</div>
+                <div className="text-xl sm:text-2xl mb-1">{stat.icon}</div>
+                <div className="text-base sm:text-2xl font-black mb-0.5 truncate" style={{ color: stat.color }}>{stat.value}</div>
+                <div className="text-[10px] sm:text-xs leading-tight" style={{ color: "var(--text-muted)" }}>{stat.label}</div>
               </div>
             ))}
           </div>

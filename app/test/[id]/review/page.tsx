@@ -339,30 +339,35 @@ export default function ReviewPage() {
       <div className="max-w-4xl mx-auto">
 
         {/* Header */}
-        <div className="mb-8 flex items-start justify-between flex-wrap gap-4">
-          <div>
+        <div className="mb-8">
+          <div className="flex items-center justify-between gap-4 mb-4">
             <Link
-              href={`/test/${examId}`}
-              className="inline-flex items-center gap-1.5 text-sm font-medium mb-3 transition-colors"
-              style={{ color: "var(--text-muted)" }}
-              onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = "#a78bfa"}
+              href="/"
+              className="flex items-center gap-1.5 text-sm font-medium transition-colors px-4 py-2 rounded-xl border sm:border-0"
+              style={{ color: "var(--text-muted)", borderColor: "var(--border-default)"}}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)"}
               onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"}
             >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
-              {t("Làm lại bài thi", "Retake test")}
+              {t("Về trang chủ", "Home")}
             </Link>
-            <h1 className="text-2xl font-black" style={{ color: "var(--text-primary)" }}>{exam.title}</h1>
-            <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>{t("Xem lại đáp án", "Review answers")}</p>
+            <Link
+              href={`/test/${examId}`}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+              style={{ background: "rgba(124,58,237,0.1)", border: "1px solid rgba(124,58,237,0.25)", color: "#a78bfa" }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(124,58,237,0.18)"}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "rgba(124,58,237,0.1)"}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              {t("Làm lại", "Retake")}
+            </Link>
           </div>
-          <Link
-            href="/"
-            className="px-4 py-2 rounded-xl text-sm font-semibold transition-all hover:opacity-80"
-            style={{ background: "var(--bg-surface)", border: "1px solid var(--border-default)", color: "var(--text-secondary)" }}
-          >
-            {t("Về trang chủ", "Home")}
-          </Link>
+          <h1 className="text-2xl font-black" style={{ color: "var(--text-primary)" }}>{exam.title}</h1>
+          <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>{t("Xem lại đáp án", "Review answers")}</p>
         </div>
 
         {/* Score summary */}
