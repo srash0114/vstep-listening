@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { usersApi, API_BASE_URL,  } from "@/lib/api";
+import { usersApi } from "@/lib/api";
 import { useLang } from "@/lib/lang";
 import { useAuth } from "@/lib/auth-context";
 import Toast, { ToastType } from "@/components/Toast";
@@ -150,7 +150,7 @@ function ProfileContent() {
   const handleLinkGoogle = async () => {
     setIsLinkingGoogle(true);
     try {
-      window.location.href = `${API_BASE_URL}/api/auth/google?action=link`;
+      window.location.href = `/api/backend/auth/google?action=link`;
     } catch (error) {
       setIsLinkingGoogle(false);
     }

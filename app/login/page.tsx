@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { usersApi, API_BASE_URL } from "@/lib/api";
+import { usersApi } from "@/lib/api";
 import { setStoredUser } from "@/lib/auth";
 import Alert from "@/components/Alert";
 import { useLang } from "@/lib/lang";
@@ -274,7 +274,7 @@ export default function Login() {
           </div>
 
           <a
-            href={`${API_BASE_URL}/api/auth/google`}
+            href="/api/backend/auth/google"
             className="w-full flex items-center justify-center gap-3 py-3.5 rounded-xl text-sm font-semibold transition-all duration-200 hover:opacity-90"
             style={{
               background: "var(--bg-elevated)",

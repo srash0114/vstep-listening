@@ -256,8 +256,10 @@ export default function Navbar() {
               <>
                 <Link
                   href="/login"
-                  className="text-sm font-medium px-2 py-2 rounded-lg transition-all duration-200"
-                  style={{ color: "var(--text-secondary)" }}
+                  className="text-sm font-medium px-2 py-2 rounded-xl transition-all duration-200"
+                  style={{
+                    border: "1px solid var(--border-default)", color: "var(--text-secondary)"
+                   }}
                   onMouseEnter={e => {
                     (e.currentTarget as HTMLElement).style.color = "var(--text-primary)";
                     (e.currentTarget as HTMLElement).style.background = "rgba(148,163,184,0.06)";
@@ -271,7 +273,7 @@ export default function Navbar() {
                 </Link>
                 <Link
                   href="/register"
-                  className="px-4 py-2 text-sm font-semibold rounded-xl text-white transition-all duration-200 hover:opacity-90 hover:scale-[1.02]"
+                  className="px-4 py-2 text-sm font-semibold rounded-xl text-white transition-all duration-200 hover:opacity-90 hover:scale-[1.02] sm:inline-block hidden"
                   style={{ background: "linear-gradient(135deg, #7c3aed, #06b6d4)" }}
                 >
                   {lang === "vi" ? "Bắt đầu" : "Get started"}

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { testsApi, userExamsApi, API_BASE_URL } from "@/lib/api";
+import { testsApi, userExamsApi } from "@/lib/api";
 import { useLang } from "@/lib/lang";
 import { useAuth } from "@/lib/auth-context";
 import { CachedAudio } from "@/components/CachedAudio";
@@ -309,7 +309,7 @@ export default function TestPage() {
           selected_option_id: optId,
         })),
       });
-      fetch(`${API_BASE_URL}/api/v1/user-exams/${userExamIdRef.current}/pause`, {
+      fetch(`/api/backend/v1/user-exams/${userExamIdRef.current}/pause`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: payload,

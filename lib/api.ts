@@ -18,13 +18,19 @@ import {
  */
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+// Dùng /api/backend thay vì gọi thẳng backend để tránh Safari ITP chặn cookie cross-site
+const isServer = typeof window === "undefined";
+const baseURL = isServer
+  ? `${API_BASE_URL}/api`
+  : "/api/backend";
+
 const api: AxiosInstance = axios.create({
-  baseURL: `${API_BASE_URL}/api`, // Base URL for all API requests
+  baseURL,
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 10000, // 10 seconds timeout
-  withCredentials: true, // ⭐ IMPORTANT: Enable cookies in requests
+  timeout: 10000,
+  withCredentials: true,
 });
 
 /**
