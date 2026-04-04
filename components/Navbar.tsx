@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useLang } from "@/lib/lang";
+import { usersApi } from "@/lib/api";
 import Avatar from "@/components/Avatar";
 
 export default function Navbar() {
-  const { user, isLoading: authLoading } = useAuth();
+  const router = useRouter();
+  const { user, isLoading: authLoading, setUser } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [quickLoginOpen, setQuickLoginOpen] = useState(false);
@@ -35,6 +38,18 @@ export default function Navbar() {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  const handleLogout = async () => {
+    setDropdownOpen(false);
+    try {
+      await usersApi.logout();
+    } catch {
+      // Nếu API lỗi vẫn clear local state để user không bị kẹt
+    } finally {
+      setUser(null);
+      router.push("/");
+    }
+  };
 
   const initials = user?.username?.slice(0, 2).toUpperCase() ?? "?";
 
@@ -210,6 +225,21 @@ export default function Navbar() {
                         {label}
                       </Link>
                     ))}
+
+                    <div style={{ borderTop: "1px solid var(--border-subtle)", marginTop: "4px", paddingTop: "4px" }}>
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-3 w-full px-4 py-2.5 text-sm transition-colors text-left"
+                        style={{ color: "#f43f5e" }}
+                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(244,63,94,0.08)"}
+                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}
+                      >
+                        <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        {lang === "vi" ? "Đăng xuất" : "Sign out"}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
