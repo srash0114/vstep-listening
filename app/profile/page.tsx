@@ -81,9 +81,10 @@ function ProfileContent() {
       const response = await usersApi.updateProfile(updates);
       if (response.success && response.data) {
         setUser({
-          ...response.data,
+          ...user,
+          ...response.data!,
           isLoggedIn: true,
-          isAdmin: response.data.role === "admin",
+          isAdmin: response.data!.role === "admin",
         });
         setIsEditing(false);
       } else {

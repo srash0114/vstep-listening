@@ -79,11 +79,8 @@ api.interceptors.response.use(
       case 401:
         // Unauthorized - Cookie expired or invalid
         if (typeof window !== "undefined") {
-          localStorage.removeItem("user"); // Clear stored user info
-          // Only redirect if NOT already on login page (prevent infinite loop)
-          if (!window.location.pathname.includes("/login")) {
-            window.location.href = "/login";
-          }
+          localStorage.removeItem("user");
+          window.dispatchEvent(new CustomEvent("auth:session-expired"));
         }
         break;
 
@@ -173,7 +170,7 @@ export const testsApi = {
     * Returns list of tests taken by the user with scores and dates
     * Requires authentication (cookie-based)
     */
-  getUserHistory: async (): Promise<UserResultsHistoryResponse> => {  
+  getUserHistory: async (): Promise<UserResultsHistoryResponse> => {
     const response = await api.get<UserResultsHistoryResponse>("/v1/users/exams/history");
     return response.data;
   },
@@ -309,13 +306,13 @@ export const testsApi = {
     }
 
     const formData = new FormData();
-    
+
     // Append form fields
     formData.append("title", testData.title);
     formData.append("level", testData.level || "B1");
     formData.append("duration", testData.duration?.toString() || "3600");
     formData.append("parts", JSON.stringify(testData.parts));
-    
+
     // Append audio files
     audioFiles.forEach((file, index) => {
       formData.append(`part_${index + 1}_audio`, file);
