@@ -148,8 +148,8 @@ function QuestionReview({
 
   const STATUS_STYLE: Record<OptionStatus, { bg: string; border: string; color: string; labelBg: string; labelColor: string }> = {
     correct: { bg: "rgba(16,185,129,0.1)", border: "rgba(16,185,129,0.35)", color: "#10b981", labelBg: "rgba(16,185,129,0.2)", labelColor: "#10b981" },
-    wrong:   { bg: "rgba(244,63,94,0.1)",  border: "rgba(244,63,94,0.35)",  color: "#fb7185", labelBg: "rgba(244,63,94,0.2)",  labelColor: "#fb7185" },
-    missed:  { bg: "rgba(16,185,129,0.05)", border: "rgba(16,185,129,0.2)", color: "#6ee7b7", labelBg: "rgba(16,185,129,0.12)", labelColor: "#6ee7b7" },
+    wrong: { bg: "rgba(244,63,94,0.1)", border: "rgba(244,63,94,0.35)", color: "#fb7185", labelBg: "rgba(244,63,94,0.2)", labelColor: "#fb7185" },
+    missed: { bg: "rgba(16,185,129,0.05)", border: "rgba(16,185,129,0.2)", color: "#6ee7b7", labelBg: "rgba(16,185,129,0.12)", labelColor: "#6ee7b7" },
     default: { bg: "transparent", border: "var(--border-subtle)", color: "var(--text-muted)", labelBg: "var(--bg-elevated)", labelColor: "var(--text-muted)" },
   };
 
@@ -250,11 +250,11 @@ export default function ReviewPage() {
     const ueid = ueidParam
       ? parseInt(ueidParam)
       : (() => {
-          try {
-            const raw = sessionStorage.getItem(`review_${examId}`);
-            return raw ? JSON.parse(raw)?.userExamId : null;
-          } catch { return null; }
-        })();
+        try {
+          const raw = sessionStorage.getItem(`review_${examId}`);
+          return raw ? JSON.parse(raw)?.userExamId : null;
+        } catch { return null; }
+      })();
 
     if (!ueid) {
       setError(t("Không tìm thấy kết quả. Vui lòng làm bài trước.", "No results found. Please take the test first."));
@@ -265,7 +265,7 @@ export default function ReviewPage() {
     try {
       const raw = sessionStorage.getItem(`review_${examId}`);
       if (raw) setTimeSpent(JSON.parse(raw)?.timeSpent);
-    } catch {}
+    } catch { }
 
     Promise.all([
       userExamsApi.getResult(ueid),
@@ -343,10 +343,8 @@ export default function ReviewPage() {
           <div className="flex items-center justify-between gap-4 mb-4">
             <Link
               href="/"
-              className="flex items-center gap-1.5 text-sm font-medium transition-colors px-4 py-2 rounded-xl border sm:border-0"
-              style={{ color: "var(--text-muted)", borderColor: "var(--border-default)"}}
-              onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)"}
-              onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"}
+              className="mb-6 flex items-center gap-2 text-sm font-semibold transition-colors hover:opacity-70"
+              style={{ color: "var(--accent-violet)" }}
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -437,8 +435,8 @@ export default function ReviewPage() {
             {isExcellent
               ? t("🏆 Xuất sắc! Bạn đã nắm vững toàn bộ bài thi.", "🏆 Excellent! You've mastered the entire test.")
               : isGood
-              ? t("🎯 Khá tốt! Xem lại các câu sai để cải thiện thêm.", "🎯 Good job! Review wrong answers to improve.")
-              : t("📚 Cần luyện tập thêm! Đọc kỹ phần giải thích bên dưới.", "📚 Keep practicing! Read the explanations below.")}
+                ? t("🎯 Khá tốt! Xem lại các câu sai để cải thiện thêm.", "🎯 Good job! Review wrong answers to improve.")
+                : t("📚 Cần luyện tập thêm! Đọc kỹ phần giải thích bên dưới.", "📚 Keep practicing! Read the explanations below.")}
           </div>
         </div>
 
@@ -451,7 +449,7 @@ export default function ReviewPage() {
             <span className="font-bold" style={{ color: "var(--text-secondary)" }}>{t("Chú thích:", "Legend:")}</span>
             {[
               { bg: "rgba(16,185,129,0.1)", border: "rgba(16,185,129,0.35)", label: t("Đúng (bạn chọn)", "Correct (your choice)") },
-              { bg: "rgba(244,63,94,0.1)",  border: "rgba(244,63,94,0.35)",  label: t("Sai (bạn chọn)", "Wrong (your choice)") },
+              { bg: "rgba(244,63,94,0.1)", border: "rgba(244,63,94,0.35)", label: t("Sai (bạn chọn)", "Wrong (your choice)") },
               { bg: "rgba(16,185,129,0.05)", border: "rgba(16,185,129,0.2)", label: t("Đáp án đúng (chưa chọn)", "Correct answer (not chosen)") },
               { bg: "transparent", border: "var(--border-subtle)", label: t("Đáp án khác", "Other option") },
             ].map(({ bg, border, label }) => (
