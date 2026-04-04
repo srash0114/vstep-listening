@@ -343,7 +343,7 @@ export default function ReviewPage() {
           <div className="flex items-center justify-between gap-4 mb-4">
             <Link
               href="/"
-              className="mb-6 flex items-center gap-2 text-sm font-semibold transition-colors hover:opacity-70"
+              className="py-2 flex items-center gap-2 text-sm font-semibold transition-colors hover:opacity-70"
               style={{ color: "var(--accent-violet)" }}
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
