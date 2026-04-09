@@ -384,7 +384,26 @@ export default function Home() {
               {/* Decorative backgrounds */}
               <div className="absolute inset-0 bg-gradient-to-tr from-violet-600/20 to-cyan-400/20 rounded-[2rem] lg:rounded-[3rem] transform -rotate-3 scale-100 sm:scale-105" />
               <div className="absolute inset-0 bg-gradient-to-bl from-emerald-500/10 to-violet-600/20 rounded-[2rem] lg:rounded-[3rem] transform rotate-2 blur-xl opacity-50" />
-
+              {/* Floating Mockup Card */}
+              <motion.div
+                animate={{ y: [-6, 6, -6] }}
+                transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
+                className="absolute -top-3 -right-0 sm:top-auto sm:-bottom-8 sm:-right-4 lg:-right-8 glass-panel p-3 sm:p-5 rounded-[1rem] sm:rounded-2xl border border-white/10 shadow-2xl z-20 w-[85%] max-w-[200px] sm:max-w-none sm:w-64 backdrop-blur-md"
+                style={{ background: "rgba(20, 20, 30, 0.85)" }}
+              >
+                <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
+                  <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30 shrink-0">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                  </div>
+                  <div>
+                    <p className="text-white text-[11px] sm:text-sm font-bold tracking-wide">Listening Part 1</p>
+                    <p className="text-emerald-400 text-[10px] sm:text-xs font-bold mt-0.5">8/8 Correct</p>
+                  </div>
+                </div>
+                <div className="w-full bg-white/10 rounded-full h-1 sm:h-1.5 mt-1.5 sm:mt-2 overflow-hidden">
+                  <motion.div initial={{ width: 0 }} whileInView={{ width: "100%" }} transition={{ duration: 1, delay: 0.5 }} className="bg-emerald-400 h-full rounded-full" />
+                </div>
+              </motion.div>
               <div className="relative w-full max-w-[280px] sm:max-w-[400px] lg:max-w-[500px]">
                 <div className="relative w-full aspect-[4/3] rounded-[1.5rem] lg:rounded-[2.5rem] overflow-hidden glass-panel group shadow-[0_10px_30px_rgba(0,0,0,0.5)] lg:shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10 flex flex-col bg-[#0b0f19]">
                   {/* Mac OS window header */}
@@ -400,27 +419,6 @@ export default function Home() {
                     <div className="absolute inset-0 bg-gradient-to-t from-[#0b0f19] via-[#0b0f19]/20 to-transparent" />
                   </div>
                 </div>
-
-                {/* Floating Mockup Card */}
-                <motion.div
-                  animate={{ y: [-6, 6, -6] }}
-                  transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
-                  className="absolute -top-3 -right-18 sm:top-auto sm:-bottom-8 sm:-right-4 lg:-right-8 glass-panel p-3 sm:p-5 rounded-[1rem] sm:rounded-2xl border border-white/10 shadow-2xl z-20 w-[85%] max-w-[200px] sm:max-w-none sm:w-64 backdrop-blur-md"
-                  style={{ background: "rgba(20, 20, 30, 0.85)" }}
-                >
-                  <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
-                    <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30 shrink-0">
-                      <svg className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    </div>
-                    <div>
-                      <p className="text-white text-[11px] sm:text-sm font-bold tracking-wide">Listening Part 1</p>
-                      <p className="text-emerald-400 text-[10px] sm:text-xs font-bold mt-0.5">8/8 Correct</p>
-                    </div>
-                  </div>
-                  <div className="w-full bg-white/10 rounded-full h-1 sm:h-1.5 mt-1.5 sm:mt-2 overflow-hidden">
-                    <motion.div initial={{ width: 0 }} whileInView={{ width: "100%" }} transition={{ duration: 1, delay: 0.5 }} className="bg-emerald-400 h-full rounded-full" />
-                  </div>
-                </motion.div>
               </div>
             </motion.div>
 
