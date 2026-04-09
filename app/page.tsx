@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import { motion, Variants } from "framer-motion";
 import { testsApi } from "@/lib/api";
 import { useLang } from "@/lib/lang";
 import { useAuth } from "@/lib/auth-context";
@@ -16,14 +18,46 @@ interface Exam {
 }
 
 const LEVEL_CONFIG: Record<string, { gradient: string; text: string; bg: string; border: string }> = {
-  "B1":    { gradient: "135deg, #10b981, #14b8a6", text: "#10b981", bg: "rgba(16,185,129,0.08)",  border: "rgba(16,185,129,0.2)" },
-  "B2":    { gradient: "135deg, #06b6d4, #3b82f6", text: "#06b6d4", bg: "rgba(6,182,212,0.08)",   border: "rgba(6,182,212,0.2)" },
+  "B1": { gradient: "135deg, #10b981, #14b8a6", text: "#10b981", bg: "rgba(16,185,129,0.08)", border: "rgba(16,185,129,0.2)" },
+  "B2": { gradient: "135deg, #06b6d4, #3b82f6", text: "#06b6d4", bg: "rgba(6,182,212,0.08)", border: "rgba(6,182,212,0.2)" },
   "B1-B2": { gradient: "135deg, #8b5cf6, #06b6d4", text: "#8b5cf6", bg: "rgba(139,92,246,0.08)", border: "rgba(139,92,246,0.2)" },
-  "C1":    { gradient: "135deg, #a855f7, #ec4899", text: "#a855f7", bg: "rgba(168,85,247,0.08)",  border: "rgba(168,85,247,0.2)" },
-  "C2":    { gradient: "135deg, #f43f5e, #f97316", text: "#f43f5e", bg: "rgba(244,63,94,0.08)",   border: "rgba(244,63,94,0.2)" },
+  "C1": { gradient: "135deg, #a855f7, #ec4899", text: "#a855f7", bg: "rgba(168,85,247,0.08)", border: "rgba(168,85,247,0.2)" },
+  "C2": { gradient: "135deg, #f43f5e, #f97316", text: "#f43f5e", bg: "rgba(244,63,94,0.08)", border: "rgba(244,63,94,0.2)" },
 };
 
 const DEFAULT_LEVEL = { gradient: "135deg, #64748b, #94a3b8", text: "#94a3b8", bg: "rgba(148,163,184,0.08)", border: "rgba(148,163,184,0.2)" };
+
+// --- Animations configuration ---
+const staggerContainer: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.15,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const slideUp: Variants = {
+  hidden: { opacity: 0, y: 80 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } },
+};
+
+const slideLeft: Variants = {
+  hidden: { opacity: 0, x: -80 },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } },
+};
+
+const slideRight: Variants = {
+  hidden: { opacity: 0, x: 80 },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } },
+};
+
+const zoomIn: Variants = {
+  hidden: { opacity: 0, scale: 0.85 },
+  visible: { opacity: 1, scale: 1, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } },
+};
 
 export default function Home() {
   const { t } = useLang();
@@ -31,6 +65,73 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
+  const sliderRef = useRef<HTMLDivElement>(null);
+  const [isHovered, setIsHovered] = useState(false);
+
+  const scrollLeft = () => {
+    if (sliderRef.current) {
+      sliderRef.current.scrollBy({ left: -360, behavior: "smooth" });
+    }
+  };
+
+  const scrollRight = () => {
+    if (sliderRef.current) {
+      sliderRef.current.scrollBy({ left: 360, behavior: "smooth" });
+    }
+  };
+
+  // Custom wheel to horizontal scroll mapping
+  useEffect(() => {
+    const el = sliderRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      // Natural horizontal scrolling (trackpads) passes through
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+
+      const isAtLeft = el.scrollLeft <= 0 && e.deltaY < 0;
+      const isAtRight = el.scrollLeft + el.clientWidth >= el.scrollWidth - 1 && e.deltaY > 0;
+
+      // Let it scroll the page naturally if we hit the edges
+      if (isAtLeft || isAtRight) return;
+
+      e.preventDefault();
+      // Remove snap behavior temporarily so it feels smooth when wheeling
+      el.style.scrollSnapType = 'none';
+      el.scrollLeft += e.deltaY;
+
+      // Restore snap afterwards
+      if ((el as any)._snapTimeout) clearTimeout((el as any)._snapTimeout);
+      (el as any)._snapTimeout = setTimeout(() => {
+        el.style.scrollSnapType = '';
+      }, 150);
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [exams]);
+
+  // Auto scroll every 3s
+  useEffect(() => {
+    if (isHovered || exams.length === 0) return;
+    const interval = setInterval(() => {
+      if (sliderRef.current) {
+        const { scrollLeft, scrollWidth, clientWidth } = sliderRef.current;
+        if (scrollLeft + clientWidth >= scrollWidth - 10) {
+          sliderRef.current.scrollTo({ left: 0, behavior: "smooth" });
+        } else {
+          sliderRef.current.scrollBy({ left: 360, behavior: "smooth" });
+        }
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [isHovered, exams]);
+
+  // Enable native scroll snapping on the document element for this landing page
+  useEffect(() => {
+    document.documentElement.classList.add("snap-y", "snap-mandatory", "scroll-smooth");
+    return () => {
+      document.documentElement.classList.remove("snap-y", "snap-mandatory", "scroll-smooth");
+    };
+  }, []);
 
   useEffect(() => {
     testsApi
@@ -47,449 +148,428 @@ export default function Home() {
       })
       .catch((err: any) => setError(err?.message || t("Không tải được danh sách đề thi", "Failed to load exams")))
       .finally(() => setLoading(false));
-  }, []);
+  }, [t]);
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
+    <div className="w-full flex flex-col" style={{ background: "var(--bg-base)" }}>
+      <style>{`
+        footer { scroll-snap-align: end; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(124, 58, 237, 0.5); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(124, 58, 237, 0.8); }
+        .glass-panel { background: rgba(20, 20, 30, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
 
-      {/* ── Hero ── */}
-      <section className="relative overflow-hidden">
-        {/* Background layers */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute inset-0" style={{
-            background: "radial-gradient(ellipse 80% 60% at 50% -10%, rgba(124,58,237,0.18) 0%, transparent 65%)"
-          }} />
-          <div className="absolute inset-0" style={{
-            backgroundImage: "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.03) 1px, transparent 0)",
-            backgroundSize: "40px 40px",
-          }} />
+      {/* ── Section 1: Hero ── */}
+      <section className="scroll-mt-16 snap-start snap-always min-h-[calc(100vh-4rem)] w-full flex flex-col relative overflow-hidden text-center lg:text-left z-10 pt-10 pb-8 lg:py-0">
+        <div className="absolute inset-0 pointer-events-none -z-10">
+          <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse 80% 60% at 50% -10%, rgba(124,58,237,0.18) 0%, transparent 65%)" }} />
+          <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.03) 1px, transparent 0)", backgroundSize: "40px 40px" }} />
         </div>
 
-        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 pt-16 pb-20 sm:pt-24 sm:pb-28">
-          <div className="flex flex-col items-center text-center">
+        <div className="flex-1 flex flex-col justify-center items-center w-full px-4 sm:px-8">
+          <motion.div
+            className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center"
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: false, amount: 0.1 }}
+          >
+            {/* Left side: Content */}
+            <div className="flex flex-col items-center lg:items-start text-center lg:text-left order-2 lg:order-1 mt-8 lg:mt-0">
+              <motion.div variants={slideUp} className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold mb-6" style={{ background: "rgba(124,58,237,0.1)", border: "1px solid rgba(124,58,237,0.25)", color: "#a78bfa" }}>
+                <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
+                {t("Nền tảng luyện thi VSTEP hàng đầu", "Vietnam's VSTEP Listening Platform")}
+              </motion.div>
 
-            {/* Badge */}
-            <div
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold mb-8"
-              style={{
-                background: "rgba(124,58,237,0.1)",
-                border: "1px solid rgba(124,58,237,0.25)",
-                color: "#a78bfa",
-              }}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
-              {t("Nền tảng luyện thi VSTEP hàng đầu", "Vietnam's VSTEP Listening Practice Platform")}
+              <motion.h1 variants={slideUp} className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-black leading-[1.05] tracking-tight mb-6">
+                <span style={{ color: "var(--text-primary)" }}>{t("Chinh phục", "Master")}{" "}</span>
+                <span style={{ background: "linear-gradient(135deg, #7c3aed 0%, #06b6d4 50%, #10b981 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                  {t("Listening VSTEP", "VSTEP Listening")}
+                </span>
+                <br />
+                <span className="text-3xl sm:text-4xl lg:text-5xl font-bold" style={{ color: "var(--text-secondary)" }}>
+                  {t("chuẩn B1 · B2 · C1", "Standard B1 · B2 · C1")}
+                </span>
+              </motion.h1>
+
+              <motion.p variants={slideUp} className="text-base sm:text-lg leading-relaxed mb-10 max-w-lg lg:max-w-none" style={{ color: "var(--text-secondary)" }}>
+                {t(
+                  "Luyện nghe thực chiến chân thực, cung cấp trải nghiệm làm bài sát với thực tế, phản hồi kết quả và giải thích chuyên sâu ngay lập tức.",
+                  "Gain real test experience with immersive UI, immediate per-part scoring, and deep analytic feedback."
+                )}
+              </motion.p>
+
+              <motion.div variants={slideUp} className="flex flex-wrap gap-4 items-center justify-center lg:justify-start w-full mb-12">
+                <a href="#exams" className="px-8 py-4 rounded-2xl text-sm font-bold text-white transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_10px_20px_rgba(124,58,237,0.3)]" style={{ background: "linear-gradient(135deg, #7c3aed, #06b6d4)" }}>
+                  {t("Bắt đầu luyện tập →", "Start Practicing →")}
+                </a>
+                {!user && (
+                  <Link href="/register" className="px-8 py-4 rounded-2xl text-sm font-bold transition-all duration-300 hover:bg-white/5" style={{ background: "var(--bg-surface)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}>
+                    {t("Đăng ký miễn phí", "Sign up free")}
+                  </Link>
+                )}
+              </motion.div>
             </div>
 
-            {/* Heading */}
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-[1.05] tracking-tight mb-6 max-w-4xl">
-              <span style={{ color: "var(--text-primary)" }}>{t("Chinh phục", "Master")}{" "}</span>
-              <span style={{
-                background: "linear-gradient(135deg, #7c3aed 0%, #06b6d4 50%, #10b981 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-              }}>
-                {t("Listening VSTEP", "VSTEP Listening")}
-              </span>
-              <br />
-              <span className="text-4xl sm:text-5xl lg:text-6xl font-bold" style={{ color: "var(--text-secondary)" }}>
-                {t("chuẩn B1 · B2 · C1", "Standard B1 · B2 · C1")}
-              </span>
-            </h1>
+            {/* Right side: Awesome 3D Image */}
+            <motion.div variants={zoomIn} className="relative w-full aspect-square max-w-[380px] sm:max-w-[400px] lg:max-w-none lg:w-full lg:h-[400px] xl:h-[500px] mx-auto order-1 lg:order-2 perspective-1000">
+              {/* Glow effect */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] bg-gradient-to-tr from-[#7c3aed]/40 to-[#06b6d4]/40 blur-3xl rounded-full" />
 
-            <p className="text-base sm:text-lg leading-relaxed mb-10 max-w-2xl" style={{ color: "var(--text-secondary)" }}>
-              {t(
-                "Bộ đề nghe chuẩn format VSTEP, đầy đủ audio và đáp án chi tiết. Làm bài, xem lại và theo dõi tiến bộ mỗi ngày.",
-                "Full-format VSTEP listening tests with audio, detailed answers, and progress tracking — all in one place."
-              )}
-            </p>
+              {/* Main image container */}
+              <div className="relative w-full h-full rounded-[2.5rem] lg:rounded-[3rem] overflow-hidden glass-panel group transition-transform duration-500 hover:rotate-2">
+                <Image src="/hero_student_3d.png" alt="Student learning VSTEP" fill className="object-cover transition-transform duration-700 ease-out group-hover:scale-110" priority />
+              </div>
 
-            {/* CTA buttons */}
-            <div className="flex flex-wrap gap-3 justify-center mb-14">
-              <a
-                href="#exams"
-                className="px-7 py-3.5 rounded-2xl text-sm font-bold text-white transition-all duration-200 hover:opacity-90 hover:-translate-y-0.5"
-                style={{ background: "linear-gradient(135deg, #7c3aed, #06b6d4)" }}
-              >
-                {t("Xem đề thi →", "Browse exams →")}
-              </a>
-              {!user && (
-                <Link
-                  href="/register"
-                  className="px-7 py-3.5 rounded-2xl text-sm font-bold transition-all duration-200 hover:opacity-80 hover:-translate-y-0.5"
-                  style={{
-                    background: "var(--bg-surface)",
-                    border: "1px solid var(--border-default)",
-                    color: "var(--text-primary)",
-                  }}
-                >
-                  {t("Đăng ký miễn phí", "Sign up free")}
-                </Link>
-              )}
-            </div>
-
-            {/* Stats bar */}
-            <div
-              className="grid grid-cols-4 rounded-2xl overflow-hidden"
-              style={{ background: "var(--bg-surface)", border: "1px solid var(--border-default)" }}
-            >
-              {[
-                { value: "3", label: t("Parts / đề", "Parts / test"), color: "#7c3aed" },
-                { value: "35", label: t("Câu hỏi", "Questions"), color: "#06b6d4" },
-                { value: "35'", label: t("Thời gian", "Duration"), color: "#10b981" },
-                { value: "B1–C1", label: t("Cấp độ", "Levels"), color: "#a855f7" },
-              ].map((stat, i, arr) => (
-                <div
-                  key={stat.label}
-                  className="flex flex-col items-center justify-center px-5 py-4 gap-0.5"
-                  style={{
-                    borderRight: i < arr.length - 1 ? "1px solid var(--border-subtle)" : "none",
-                  }}
-                >
-                  <p className="text-lg font-black leading-none tabular-nums" style={{ color: stat.color }}>{stat.value}</p>
-                  <p className="text-[11px] mt-1 whitespace-nowrap" style={{ color: "var(--text-muted)" }}>{stat.label}</p>
+              {/* Floating Badges */}
+              <motion.div animate={{ y: [0, -15, 0] }} transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }} className="absolute -top-8 sm:-top-8 -right-8 sm:-right-10 p-3 sm:p-5 rounded-3xl glass-panel z-20 flex items-center gap-3">
+                <div className="text-2xl sm:text-3xl">🎯</div>
+                <div>
+                  <p className="text-white font-black text-sm sm:text-base tracking-tight">VSTEP 8.5+</p>
+                  <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider mt-0.5">Mục tiêu đỗ</p>
                 </div>
-              ))}
-            </div>
-          </div>
+              </motion.div>
+              <motion.div animate={{ y: [0, 15, 0] }} transition={{ repeat: Infinity, duration: 5, ease: "easeInOut", delay: 1 }} className="absolute -bottom-6 sm:-bottom-10 -left-8 sm:-left-10 p-3 sm:p-5 rounded-3xl glass-panel z-20 flex items-center gap-3">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                </div>
+                <div>
+                  <p className="text-white font-black text-sm sm:text-base tracking-tight">Chấm điểm ngay</p>
+                  <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider mt-0.5">AI tự động feedback</p>
+                </div>
+              </motion.div>
+            </motion.div>
+          </motion.div>
         </div>
-      </section>
 
-      {/* ── Features strip ── */}
-      <div style={{ borderTop: "1px solid var(--border-subtle)", borderBottom: "1px solid var(--border-subtle)" }}>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
-          <div className="flex flex-wrap justify-center gap-x-8 gap-y-3">
+        {/* Feature Strip attached to bottom */}
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false }} transition={{ duration: 0.8, delay: 0.4 }} className="w-full mt-auto py-5 border-t border-b border-white/5 bg-white/[0.02] backdrop-blur-md hidden sm:block">
+          <div className="max-w-7xl mx-auto px-4 flex justify-between gap-4">
             {[
-              {
-                icon: <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 18v-6a9 9 0 0 1 18 0v6"/><path strokeLinecap="round" strokeLinejoin="round" d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>,
-                text: t("Audio chất lượng cao", "High-quality audio"),
-              },
-              {
-                icon: <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>,
-                text: t("Đáp án chi tiết", "Detailed answers"),
-              },
-              {
-                icon: <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>,
-                text: t("Theo dõi tiến độ", "Progress tracking"),
-              },
-              {
-                icon: <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>,
-                text: t("Làm lại không giới hạn", "Unlimited retakes"),
-              },
-              {
-                icon: <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>,
-                text: t("Giao diện tối / sáng", "Dark / light mode"),
-              },
+              { icon: <path strokeLinecap="round" strokeLinejoin="round" d="M3 18v-6a9 9 0 0 1 18 0v6" />, text: t("Audio chất lượng studio", "Studio-quality audio") },
+              { icon: <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />, text: t("Giải chi tiết", "Detailed solutions") },
+              { icon: <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6...m-6 0..." />, text: t("Dashboard điểm số", "Score dashboard") },
+              { icon: <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />, text: t("Dark/Light Mode", "Dark/Light Mode") },
             ].map((f, i) => (
-              <div key={i} className="flex items-center gap-2 text-xs font-medium" style={{ color: "var(--text-muted)" }}>
-                <span style={{ color: "#7c3aed", opacity: 0.8 }}>{f.icon}</span>
+              <div key={i} className="flex items-center gap-3 text-sm font-semibold text-slate-400">
+                <span className="text-violet-400"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>{f.icon}</svg></span>
                 <span>{f.text}</span>
               </div>
             ))}
           </div>
-        </div>
-      </div>
-
-      {/* ── Exam list ── */}
-      <section id="exams" className="max-w-6xl mx-auto px-4 sm:px-6 py-16">
-
-        {/* Section header */}
-        <div className="flex items-end justify-between mb-10">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "#7c3aed" }}>
-              {t("Kho đề thi", "Exam library")}
-            </p>
-            <h2 className="text-2xl sm:text-3xl font-black" style={{ color: "var(--text-primary)" }}>
-              {t("Danh sách đề thi", "Available Exams")}
-            </h2>
-          </div>
-          {!loading && exams.length > 0 && (
-            <span
-              className="text-xs px-3 py-1.5 rounded-full font-semibold"
-              style={{ background: "rgba(16,185,129,0.1)", color: "#10b981", border: "1px solid rgba(16,185,129,0.2)" }}
-            >
-              {exams.length} {t("đề có sẵn", "available")}
-            </span>
-          )}
-        </div>
-
-        {/* Error */}
-        {error && (
-          <div
-            className="mb-8 flex items-start gap-3 p-4 rounded-2xl text-sm"
-            style={{ background: "rgba(244,63,94,0.08)", border: "1px solid rgba(244,63,94,0.2)", color: "#fb7185" }}
-          >
-            <svg className="w-5 h-5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            {error}
-          </div>
-        )}
-
-        {/* Skeleton */}
-        {loading && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="rounded-3xl p-6" style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)" }}>
-                <div className="flex items-center justify-between mb-6">
-                  <div className="w-12 h-12 rounded-2xl skeleton" />
-                  <div className="w-14 h-5 rounded-full skeleton" />
-                </div>
-                <div className="h-5 rounded-lg skeleton w-3/4 mb-3" />
-                <div className="h-4 rounded-lg skeleton w-full mb-2" />
-                <div className="h-4 rounded-lg skeleton w-2/3 mb-7" />
-                <div className="h-11 rounded-2xl skeleton" />
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Empty */}
-        {!loading && !error && exams.length === 0 && (
-          <div
-            className="text-center py-24 rounded-3xl"
-            style={{ background: "var(--bg-surface)", border: "1px dashed var(--border-default)" }}
-          >
-            <div className="text-4xl mb-4">🎧</div>
-            <p className="font-bold mb-2" style={{ color: "var(--text-primary)" }}>{t("Chưa có đề thi nào", "No exams yet")}</p>
-            <p className="text-sm" style={{ color: "var(--text-muted)" }}>{t("Quay lại sau để xem đề thi mới nhất", "Check back later for new exams")}</p>
-          </div>
-        )}
-
-        {/* Grid */}
-        {!loading && exams.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {exams.map((exam, i) => (
-              <ExamCard key={exam.id} exam={exam} index={i} />
-            ))}
-          </div>
-        )}
+        </motion.div>
       </section>
 
-      {/* ── How it works ── */}
-      {!loading && exams.length > 0 && (
-        <section style={{ borderTop: "1px solid var(--border-subtle)" }}>
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
-
-            <div className="text-center mb-14">
-              <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: "#06b6d4" }}>
-                {t("Cách hoạt động", "How it works")}
+      {/* ── Section 2: Exam list ── */}
+      <section id="exams" className="scroll-mt-16 snap-start snap-always min-h-[calc(100vh-4rem)] w-full flex flex-col justify-center px-4 py-4">
+        <motion.div
+          className="max-w-7xl mx-auto w-full"
+          variants={staggerContainer}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: false, amount: 0.15 }}
+        >
+          {/* Section header */}
+          <motion.div variants={slideLeft} className="flex items-end justify-between mb-10">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "#7c3aed" }}>
+                {t("Kho đề thi", "Exam library")}
               </p>
-              <h2 className="text-2xl sm:text-3xl font-black" style={{ color: "var(--text-primary)" }}>
-                {t("Làm bài chỉ trong 3 bước", "Get started in 3 steps")}
+              <h2 className="text-3xl sm:text-4xl font-black" style={{ color: "var(--text-primary)" }}>
+                {t("Thư viện luyện tập", "Practice Library")}
               </h2>
             </div>
+            {!loading && exams.length > 0 && (
+              <div className="flex flex-col sm:flex-row items-end sm:items-center gap-4">
+                {/* {exams.length > 6 && (
+                  <Link href="/exams" className="text-sm font-bold opacity-80 hover:opacity-100 transition-opacity flex items-center gap-1" style={{ color: "var(--text-secondary)" }}>
+                    {t("Xem tất cả", "See all")} <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                  </Link>
+                )} */}
+                <span className="text-xs px-4 py-2 rounded-xl font-bold uppercase tracking-wider hidden sm:block" style={{ background: "rgba(16,185,129,0.1)", color: "#10b981", border: "1px solid rgba(16,185,129,0.2)" }}>
+                  {exams.length} {t("đề thi mới", "new exams")}
+                </span>
+              </div>
+            )}
+          </motion.div>
 
-            {/* Cards grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {[
-                {
-                  step: 1,
-                  icon: (
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
-                    </svg>
-                  ),
-                  title: t("Chọn đề thi", "Pick an exam"),
-                  desc: t("Duyệt qua các đề thi, chọn cấp độ phù hợp với bạn — B1, B2 hoặc C1.", "Browse the exam library and pick the level that suits you — B1, B2, or C1."),
-                  color: "#7c3aed",
-                  bg: "rgba(124,58,237,0.08)",
-                  border: "rgba(124,58,237,0.15)",
-                  glow: "rgba(124,58,237,0.2)",
-                },
-                {
-                  step: 2,
-                  icon: (
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 18v-6a9 9 0 0 1 18 0v6" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
-                    </svg>
-                  ),
-                  title: t("Nghe và trả lời", "Listen & answer"),
-                  desc: t("Nghe audio theo từng Part, chọn đáp án trong thời gian cho phép. Bài làm được lưu tự động.", "Listen part by part, select your answers within the time limit. Progress is saved automatically."),
-                  color: "#06b6d4",
-                  bg: "rgba(6,182,212,0.08)",
-                  border: "rgba(6,182,212,0.15)",
-                  glow: "rgba(6,182,212,0.2)",
-                },
-                {
-                  step: 3,
-                  icon: (
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2zm0 0V9a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v10m-6 0a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2m0 0V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z" />
-                    </svg>
-                  ),
-                  title: t("Xem kết quả & Xem lại", "Review & improve"),
-                  desc: t("Xem điểm theo từng Part, đáp án đúng và lưu lịch sử làm bài để theo dõi tiến bộ.", "See per-part scores, correct answers, and keep a full history to track your improvement."),
-                  color: "#10b981",
-                  bg: "rgba(16,185,129,0.08)",
-                  border: "rgba(16,185,129,0.15)",
-                  glow: "rgba(16,185,129,0.2)",
-                },
-              ].map((s) => (
-                <div
-                  key={s.step}
-                  className="relative flex flex-col gap-4 p-6 rounded-2xl overflow-hidden"
-                  style={{
-                    background: "var(--bg-surface)",
-                    border: "1px solid var(--border-subtle)",
-                  }}
-                >
-                  {/* Top accent */}
-                  <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(to right, ${s.color}, transparent)` }} />
+          {error && (
+            <motion.div variants={zoomIn} className="mb-8 flex items-start gap-3 p-5 rounded-2xl text-sm" style={{ background: "rgba(244,63,94,0.08)", border: "1px solid rgba(244,63,94,0.2)", color: "#fb7185" }}>
+              <span className="text-xl">⚠️</span> {error}
+            </motion.div>
+          )}
 
-                  {/* Icon + step label */}
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                      style={{ background: s.bg, border: `1px solid ${s.border}`, color: s.color, boxShadow: `0 0 16px ${s.glow}` }}
-                    >
-                      {s.icon}
-                    </div>
-                    <span className="text-[11px] font-black uppercase tracking-widest" style={{ color: s.color }}>
-                      {t(`Bước ${s.step}`, `Step ${s.step}`)}
-                    </span>
+          {loading && (
+            <motion.div variants={staggerContainer} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3].map((i) => (
+                <motion.div variants={slideUp} key={i} className="rounded-3xl p-6 h-64 skeleton opacity-50" style={{ background: "var(--bg-surface)" }} />
+              ))}
+            </motion.div>
+          )}
+
+          {!loading && !error && exams.length === 0 && (
+            <motion.div variants={zoomIn} className="text-center py-32 rounded-[2.5rem] glass-panel border-dashed border-slate-700">
+              <div className="text-6xl mb-6 opacity-80">🎧</div>
+              <p className="text-xl font-black mb-2">{t("Kho đề đang được cập nhật", "Library is updating")}</p>
+              <p className="text-slate-400">{t("Quay lại sau nhé!", "Check back later!")}</p>
+            </motion.div>
+          )}
+
+          {!loading && exams.length > 0 && (
+            <div
+              className="relative w-full group/slider"
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+              onTouchStart={() => setIsHovered(true)}
+              onTouchEnd={() => setIsHovered(false)}
+            >
+              {/* Left Arrow Button */}
+              <button
+                onClick={scrollLeft}
+                className="hidden sm:flex absolute left-2 lg:-left-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full glass-panel items-center justify-center text-white opacity-0 group-hover/slider:opacity-100 transition-all hover:scale-110 hover:bg-white/10 shadow-[0_0_20px_rgba(0,0,0,0.5)] border border-white/10"
+                aria-label="Scroll left"
+              >
+                <svg className="w-6 h-6 pr-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
+              </button>
+
+              <motion.div
+                ref={sliderRef}
+                variants={slideUp}
+                className="flex overflow-x-auto snap-x snap-mandatory gap-6 lg:gap-8 pb-8 pt-4 hide-scrollbar"
+              >
+                {exams.map((exam) => (
+                  <div key={exam.id} className="min-w-[280px] sm:min-w-[340px] md:min-w-[380px] snap-center shrink-0">
+                    <ExamCard exam={exam} />
+                  </div>
+                ))}
+
+                {/* Dummy item for right padding in scroll view */}
+                <div className="min-w-[1px] shrink-0" />
+              </motion.div>
+
+              {/* Right Arrow Button */}
+              <button
+                onClick={scrollRight}
+                className="hidden sm:flex absolute right-2 lg:-right-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full glass-panel items-center justify-center text-white opacity-0 group-hover/slider:opacity-100 transition-all hover:scale-110 hover:bg-white/10 shadow-[0_0_20px_rgba(0,0,0,0.5)] border border-white/10"
+                aria-label="Scroll right"
+              >
+                <svg className="w-6 h-6 pl-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+              </button>
+
+              {/* Fade gradients for indicator */}
+              <div className="absolute top-0 bottom-8 left-0 w-4 sm:w-8 bg-gradient-to-r from-[var(--bg-base)] to-transparent pointer-events-none" />
+              <div className="absolute top-0 bottom-8 right-0 w-4 sm:w-8 bg-gradient-to-l from-[var(--bg-base)] to-transparent pointer-events-none" />
+            </div>
+          )}
+        </motion.div>
+      </section>
+
+      {/* ── Section 3: How it works (Image + Text split) ── */}
+      {!loading && exams.length > 0 && (
+        <section className="scroll-mt-16 snap-start lg:snap-always w-full lg:min-h-[calc(87vh-4rem)] flex flex-col justify-center px-4 py-8 lg:py-4 bg-[var(--bg-base)]">
+          <motion.div
+            className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-[1fr_1.1fr] gap-8 lg:gap-16 items-center"
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: false, amount: 0.2 }}
+          >
+            {/* Left UI Mockup Image */}
+            <motion.div variants={slideRight} className="relative w-full order-2 lg:order-1 flex justify-center py-2 lg:py-8 mt-4 lg:mt-0">
+              {/* Decorative backgrounds */}
+              <div className="absolute inset-0 bg-gradient-to-tr from-violet-600/20 to-cyan-400/20 rounded-[2rem] lg:rounded-[3rem] transform -rotate-3 scale-100 sm:scale-105" />
+              <div className="absolute inset-0 bg-gradient-to-bl from-emerald-500/10 to-violet-600/20 rounded-[2rem] lg:rounded-[3rem] transform rotate-2 blur-xl opacity-50" />
+
+              <div className="relative w-full max-w-[280px] sm:max-w-[400px] lg:max-w-[500px]">
+                <div className="relative w-full aspect-[4/3] rounded-[1.5rem] lg:rounded-[2.5rem] overflow-hidden glass-panel group shadow-[0_10px_30px_rgba(0,0,0,0.5)] lg:shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10 flex flex-col bg-[#0b0f19]">
+                  {/* Mac OS window header */}
+                  <div className="h-8 sm:h-10 w-full bg-white/5 flex items-center px-4 sm:px-5 gap-1.5 sm:gap-2 border-b border-white/5 shrink-0">
+                    <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-500/80" />
+                    <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-amber-500/80" />
+                    <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-500/80" />
                   </div>
 
-                  {/* Text */}
-                  <div>
-                    <h3 className="font-bold text-sm mb-1.5" style={{ color: "var(--text-primary)" }}>{s.title}</h3>
-                    <p className="text-sm leading-relaxed" style={{ color: "var(--text-muted)" }}>{s.desc}</p>
+                  {/* Image content */}
+                  <div className="relative flex-1 w-full bg-black">
+                    <Image src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1000&auto=format&fit=crop" alt="Dashboard Mockup" fill className="object-cover object-center opacity-70 group-hover:scale-105 group-hover:opacity-90 transition-all duration-700" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0b0f19] via-[#0b0f19]/20 to-transparent" />
                   </div>
                 </div>
-              ))}
+
+                {/* Floating Mockup Card */}
+                <motion.div
+                  animate={{ y: [-6, 6, -6] }}
+                  transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
+                  className="absolute -top-3 -right-18 sm:top-auto sm:-bottom-8 sm:-right-4 lg:-right-8 glass-panel p-3 sm:p-5 rounded-[1rem] sm:rounded-2xl border border-white/10 shadow-2xl z-20 w-[85%] max-w-[200px] sm:max-w-none sm:w-64 backdrop-blur-md"
+                  style={{ background: "rgba(20, 20, 30, 0.85)" }}
+                >
+                  <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
+                    <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30 shrink-0">
+                      <svg className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    </div>
+                    <div>
+                      <p className="text-white text-[11px] sm:text-sm font-bold tracking-wide">Listening Part 1</p>
+                      <p className="text-emerald-400 text-[10px] sm:text-xs font-bold mt-0.5">8/8 Correct</p>
+                    </div>
+                  </div>
+                  <div className="w-full bg-white/10 rounded-full h-1 sm:h-1.5 mt-1.5 sm:mt-2 overflow-hidden">
+                    <motion.div initial={{ width: 0 }} whileInView={{ width: "100%" }} transition={{ duration: 1, delay: 0.5 }} className="bg-emerald-400 h-full rounded-full" />
+                  </div>
+                </motion.div>
+              </div>
+            </motion.div>
+
+            {/* Right Text / Vertical steps */}
+            <div className="order-1 lg:order-2 flex flex-col items-center lg:items-start text-center lg:text-left">
+              <motion.div variants={slideLeft} className="mb-6 w-full">
+                <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-2 bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-cyan-400 inline-block">
+                  {t("Cách thức hoạt động", "Workflow")}
+                </p>
+                <h2 className="text-2xl sm:text-3xl font-black mb-3 tracking-tight" style={{ color: "var(--text-primary)" }}>
+                  {t("Làm bài thông minh, tối ưu điểm số", "Practice smart, maximize score")}
+                </h2>
+                <p className="text-sm sm:text-base text-slate-400 max-w-lg mx-auto lg:mx-0 leading-relaxed">
+                  Trải nghiệm phòng thi ngay tại nhà với các công cụ chấm chữa bằng thuật toán tiên tiến. Điểm chuẩn hơn, cải thiện nhanh hơn.
+                </p>
+              </motion.div>
+
+              <div className="relative flex flex-col gap-3 sm:gap-4 w-full max-w-lg mx-auto lg:mx-0">
+                {[
+                  { step: 1, color: "#7c3aed", title: t("Chọn đề & Mức độ", "Select level"), desc: "Kho dữ liệu B1, B2, C1 phong phú đa dạng chủ đề." },
+                  { step: 2, color: "#06b6d4", title: t("Thi thử như thật", "Simulated testing"), desc: "Giới hạn thời gian, chia part khoa học, giao diện làm bài tập trung cao độ." },
+                  { step: 3, color: "#10b981", title: t("Chấm chữa & Theo dõi", "Analyze & Track"), desc: "So sánh đáp án, nghe giải thích, đồ thị tăng trưởng minh bạch." },
+                ].map((s, idx, arr) => (
+                  <motion.div variants={slideUp} key={s.step} className="relative flex gap-3 sm:gap-4 text-left group items-start">
+                    {/* Connecting line to the next item */}
+                    {idx < arr.length - 1 && (
+                      <div
+                        className="absolute left-[19px] top-[20px] w-[2px] hidden sm:block h-[calc(100%+12px)] sm:h-[calc(100%+16px)] pointer-events-none"
+                        style={{ background: `linear-gradient(to bottom, ${s.color}40, ${arr[idx + 1].color}40)` }}
+                      />
+                    )}
+                    <div className="w-10 h-10 rounded-xl flex flex-col items-center justify-center font-black text-base shrink-0 shadow-lg relative z-10 transition-transform duration-300 group-hover:scale-[1.10] group-hover:-rotate-3 bg-[var(--bg-base)]" style={{ color: s.color, border: `1px solid ${s.color}`, boxShadow: `0 0 10px ${s.color}20` }}>
+                      {s.step}
+                    </div>
+                    <div className="bg-white/[0.02] p-3 sm:p-4 rounded-2xl border border-white/5 flex-1 transition-all duration-300 group-hover:bg-white/[0.05] group-hover:border-white/10 shadow-sm group-hover:shadow-md">
+                      <h4 className="font-bold text-sm sm:text-base mb-1" style={{ color: "var(--text-primary)" }}>{s.title}</h4>
+                      <p className="text-slate-400 text-xs leading-relaxed">{s.desc}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
             </div>
-          </div>
+          </motion.div>
         </section>
       )}
 
-      {/* ── CTA Banner ── */}
+      {/* ── Section 4: CTA Banner ── */}
       {!user && !loading && exams.length > 0 && (
-        <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-16">
-          <div
-            className="rounded-3xl px-8 sm:px-14 py-12 relative overflow-hidden"
-            style={{
-              background: "linear-gradient(135deg, rgba(124,58,237,0.18) 0%, rgba(6,182,212,0.1) 100%)",
-              border: "1px solid rgba(124,58,237,0.2)",
-            }}
+        <section className="scroll-mt-16 snap-start lg:snap-always w-full min-h-[50vh] lg:min-h-[calc(100vh-4rem)] flex flex-col justify-center py-12 lg:py-16 px-4 pb-20">
+          <motion.div
+            className="max-w-5xl mx-auto w-full"
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: false, amount: 0.5 }}
           >
-            {/* Decorative circles */}
-            <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, rgba(6,182,212,0.15), transparent 70%)" }} />
-            <div className="absolute -bottom-10 -left-10 w-40 h-40 rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, rgba(124,58,237,0.1), transparent 70%)" }} />
+            <motion.div variants={zoomIn} className="rounded-[3rem] px-8 sm:px-16 py-16 relative overflow-hidden glass-panel"
+              style={{ background: "linear-gradient(135deg, rgba(124,58,237,0.15) 0%, rgba(6,182,212,0.15) 100%)", borderColor: "rgba(124,58,237,0.3)" }}>
+              {/* Decorative circles */}
+              <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-cyan-500/10 blur-3xl" />
+              <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-violet-600/20 blur-3xl" />
 
-            <div className="relative flex flex-col sm:flex-row items-center justify-between gap-8 text-center sm:text-left">
-              <div>
-                <h3 className="text-2xl font-black mb-2" style={{ color: "var(--text-primary)" }}>
-                  {t("Sẵn sàng chinh phục VSTEP?", "Ready to ace VSTEP?")}
+              <div className="relative z-10 flex flex-col items-center text-center max-w-2xl mx-auto">
+                <span className="text-5xl mb-4">🚀</span>
+                <h3 className="text-3xl sm:text-5xl font-black mb-6 tracking-tight text-white drop-shadow-md">
+                  Bắt kịp trình độ <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-emerald-400">của bạn</span> ngay hôm nay
                 </h3>
-                <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+                <p className="text-base sm:text-lg text-slate-300 mb-10">
                   {t(
-                    "Tạo tài khoản miễn phí để lưu kết quả, xem lại bài làm và theo dõi tiến bộ.",
-                    "Create a free account to save results, review answers, and track your progress."
+                    "Gia nhập nền tảng với hơn hàng ngàn bộ câu hỏi, tính năng lưu trữ kết quả và lộ trình học tập tuỳ biến.",
+                    "Join our platform to get unlimited tests, saved history, and custom study plans."
                   )}
                 </p>
+                <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto justify-center">
+                  <Link href="/register" className="px-10 py-4 rounded-2xl text-base font-bold text-white transition-all duration-300 hover:scale-105 shadow-[0_0_30px_rgba(124,58,237,0.4)]" style={{ background: "linear-gradient(135deg, #7c3aed, #06b6d4)" }}>
+                    {t("Tạo tài khoản miễn phí", "Create Free Account")}
+                  </Link>
+                  <Link href="/login" className="px-10 py-4 rounded-2xl text-base font-bold text-white transition-all duration-300 hover:bg-white/10 glass-panel">
+                    {t("Đăng nhập ngay", "Sign in")}
+                  </Link>
+                </div>
               </div>
-              <div className="flex flex-col sm:flex-row gap-3 shrink-0">
-                <Link
-                  href="/register"
-                  className="px-8 py-3.5 rounded-2xl text-sm font-bold text-white transition-all duration-200 hover:opacity-90 hover:-translate-y-0.5 whitespace-nowrap"
-                  style={{ background: "linear-gradient(135deg, #7c3aed, #06b6d4)" }}
-                >
-                  {t("Đăng ký miễn phí →", "Sign up free →")}
-                </Link>
-                <Link
-                  href="/login"
-                  className="px-8 py-3.5 rounded-2xl text-sm font-bold transition-all duration-200 hover:opacity-80 hover:-translate-y-0.5 whitespace-nowrap"
-                  style={{ background: "var(--bg-surface)", border: "1px solid var(--border-default)", color: "var(--text-secondary)" }}
-                >
-                  {t("Đăng nhập", "Log in")}
-                </Link>
-              </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </section>
       )}
     </div>
   );
 }
 
-function ExamCard({ exam, index }: { exam: Exam; index: number }) {
+function ExamCard({ exam }: { exam: Exam }) {
   const { t } = useLang();
   const lc = LEVEL_CONFIG[exam.level ?? ""] ?? DEFAULT_LEVEL;
 
   return (
-    <Link
-      href={`/test/${exam.id}`}
-      className="group block h-full fade-up"
-      style={{ animationDelay: `${index * 0.07}s` }}
-    >
+    <Link href={`/test/${exam.id}`} className="group block h-full w-full">
       <div
-        className="h-full rounded-3xl overflow-hidden transition-all duration-300 group-hover:-translate-y-1.5 flex flex-col group-hover:border-transparent"
-        onMouseEnter={ (e) => {e.currentTarget.style.boxShadow = `0 8px 16px ${lc.border}` ;e.currentTarget.style.border = `1px solid ${lc.border}` } }
-        onMouseLeave={ (e) => {e.currentTarget.style.boxShadow = `0 0 0 rgba(0,0,0,0), 0 0 0 rgba(0,0,0,0)` ;e.currentTarget.style.border = `1px solid var(--border-subtle)` } }
-        style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", boxShadow: `0 0 0 rgba(0,0,0,0), 0 0 0 rgba(0,0,0,0)`}}
+        className="h-full min-h-[440px] rounded-[2rem] overflow-hidden transition-all duration-400 hover:-translate-y-2 flex flex-col relative glass-panel group-hover:bg-white/[0.04]"
+        style={{ borderColor: "rgba(255,255,255,0.05)" }}
       >
-        <div className="p-6 flex flex-col flex-1">
-          {/* Header */}
-          <div className="flex items-start justify-between gap-3 mb-5">
-            <div
-              className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110"
-              style={{ background: lc.bg, border: `1px solid ${lc.border}` }}
-            >
-              <svg className="w-6 h-6" style={{ color: lc.text }} fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 3a9 9 0 0 0-9 9v4a3 3 0 0 0 3 3h1a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1H5.07A7 7 0 0 1 19 12h-1a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h1a3 3 0 0 0 3-3v-4a9 9 0 0 0-9-9z" />
-              </svg>
-            </div>
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" style={{ background: `radial-gradient(circle at 50% 0%, ${lc.gradient.split(',')[1]}33, transparent 70%)` }} />
+
+        {/* Course Placeholder Image */}
+        <div className="w-full h-44 shrink-0 relative overflow-hidden bg-white/5 border-b border-white/5">
+          <div className="absolute inset-0 bg-cover bg-center transition-transform duration-[2000ms]" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1523240795612-9a054b0db644?q=80&w=600&auto=format&fit=crop')`, opacity: 0.8 }} />
+          <div className="absolute inset-0 bg-gradient-to-t from-[rgba(20,20,30,1)] to-transparent" />
+
+          <div className="absolute bottom-4 left-6 flex items-center gap-2">
             {exam.level && (
-              <span
-                className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full"
-                style={{ background: lc.bg, color: lc.text, border: `1px solid ${lc.border}` }}
-              >
+              <span className="inline-flex items-center gap-1.5 text-[10px] sm:text-xs font-black uppercase tracking-wider px-3 py-1.5 bg-black/40 backdrop-blur-md rounded-xl shadow-sm" style={{ color: lc.text, border: `1px solid ${lc.border}` }}>
                 {exam.level}
               </span>
             )}
           </div>
+        </div>
 
-          {/* Title */}
+        <div className="p-6 flex flex-col flex-1 z-10">
+          <div className="flex items-start justify-between gap-3 mb-4">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-lg transition-transform duration-500 group-hover:scale-[1.15] group-hover:rotate-6" style={{ background: lc.bg, border: `1px solid ${lc.border}` }}>
+              <svg className="w-6 h-6" style={{ color: lc.text }} fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 3a9 9 0 0 0-9 9v4a3 3 0 0 0 3 3h1a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1H5.07A7 7 0 0 1 19 12h-1a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h1a3 3 0 0 0 3-3v-4a9 9 0 0 0-9-9z" />
+              </svg>
+            </div>
+          </div>
           <h3
-            className="font-black text-base leading-snug mb-2.5 transition-colors duration-200"
-            style={{ color: "var(--text-primary)" }}
+            className="font-extrabold text-xl leading-snug mb-3 transition-all text-white group-hover:text-transparent bg-clip-text"
+            style={{ backgroundImage: `linear-gradient(${lc.gradient})` }}
           >
             {exam.title}
           </h3>
-
-          {/* Description */}
           {exam.description && (
-            <p className="text-sm line-clamp-2 mb-5 flex-1 leading-relaxed" style={{ color: "var(--text-muted)" }}>
+            <p className="text-sm line-clamp-2 mb-6 flex-1 text-slate-400 group-hover:text-slate-300 transition-colors">
               {exam.description}
             </p>
           )}
 
           <div className="mt-auto">
-            {/* Stats chips */}
-            <div className="flex flex-wrap gap-2 mb-5">
+            <div className="flex flex-wrap gap-2 mb-6">
               {[
                 { label: `${exam.total_questions ?? 35} ${t("câu", "qs")}`, icon: "📝" },
                 { label: `${exam.total_duration ?? 35} ${t("phút", "min")}`, icon: "⏱" },
-                { label: "3 parts", icon: "◈" },
+                { label: "3 parts", icon: "💎" },
               ].map((s) => (
-                <span
-                  key={s.label}
-                  className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-xl font-medium"
-                  style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)", color: "var(--text-muted)" }}
-                >
-                  {s.icon} {s.label}
+                <span key={s.label} className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl font-bold bg-black/20 text-slate-300 border border-white/5">
+                  <span className="opacity-70">{s.icon}</span> {s.label}
                 </span>
               ))}
             </div>
-
-            {/* CTA button */}
-            <div
-              className="w-full py-3 rounded-2xl text-sm font-bold text-center text-white transition-all duration-200 group-hover:opacity-90 group-hover:shadow-lg"
-              style={{ background: `linear-gradient(${lc.gradient})` }}
-            >
-              {t("Làm bài ngay →", "Start now →")}
+            <div className="w-full py-4 rounded-xl text-sm font-black text-center text-white transition-all duration-300 shadow-[0_5px_15px_rgba(0,0,0,0.2)] opacity-90 group-hover:opacity-100" style={{ background: `linear-gradient(${lc.gradient})` }}>
+              {t("LÀM BÀI NGAY", "START NOW")}
             </div>
           </div>
         </div>
