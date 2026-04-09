@@ -121,7 +121,7 @@ export default function Home() {
           sliderRef.current.scrollBy({ left: 360, behavior: "smooth" });
         }
       }
-    }, 3000);
+    }, 5000);
     return () => clearInterval(interval);
   }, [isHovered, exams]);
 
@@ -165,13 +165,13 @@ export default function Home() {
       `}</style>
 
       {/* ── Section 1: Hero ── */}
-      <section className="scroll-mt-16 snap-start lg:snap-always min-h-[100dvh] lg:min-h-[calc(100vh-4rem)] w-full flex flex-col relative text-center lg:text-left z-10 pt-16 pb-16 lg:pt-0 lg:pb-0 overflow-x-clip overflow-y-visible lg:overflow-hidden">
+      <section className="scroll-mt-16 snap-start lg:snap-always w-full flex flex-col relative text-center lg:text-left z-10 lg:pt-0 lg:pb-0 overflow-hidden overflow-y-visible lg:overflow-hidden">
         <div className="absolute inset-0 pointer-events-none -z-10 overflow-hidden">
           <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse 80% 60% at 50% -10%, rgba(124,58,237,0.18) 0%, transparent 65%)" }} />
           <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.03) 1px, transparent 0)", backgroundSize: "40px 40px" }} />
         </div>
 
-        <div className="flex-1 flex flex-col justify-center items-center w-full px-4 sm:px-8">
+        <div className="flex-1 flex flex-col justify-center items-center w-full px-4 sm:px-8 pt-10 pb-0 sm:pb-10">
           <motion.div
             className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center"
             variants={staggerContainer}
@@ -248,8 +248,8 @@ export default function Home() {
         </div>
 
         {/* Feature Strip attached to bottom */}
-        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false }} transition={{ duration: 0.8, delay: 0.4 }} className="w-full mt-auto py-5 border-t border-b border-white/5 bg-white/[0.02] backdrop-blur-md hidden sm:block">
-          <div className="max-w-7xl mx-auto px-4 flex justify-between gap-4">
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false }} transition={{ duration: 0.8, delay: 0.4 }} className="max-w-7xl mx-auto w-full mt-auto py-5 px-5 rounded-full border-t border-b border-white/5 bg-white/[0.02] backdrop-blur-md hidden sm:block">
+          <div className="px-4 flex justify-between gap-4 overflow-x-clip">
             {[
               { icon: <path strokeLinecap="round" strokeLinejoin="round" d="M3 18v-6a9 9 0 0 1 18 0v6" />, text: t("Audio chất lượng studio", "Studio-quality audio") },
               { icon: <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />, text: t("Giải chi tiết", "Detailed solutions") },
@@ -266,7 +266,7 @@ export default function Home() {
       </section>
 
       {/* ── Section 2: Exam list ── */}
-      <section id="exams" className="scroll-mt-16 snap-start snap-always min-h-[calc(100vh-4rem)] w-full flex flex-col justify-center px-4 py-4">
+      <section id="exams" className="scroll-mt-16 snap-start snap-always w-full flex flex-col justify-center px-4 py-0 sm:py-10">
         <motion.div
           className="max-w-7xl mx-auto w-full"
           variants={staggerContainer}
@@ -371,7 +371,7 @@ export default function Home() {
 
       {/* ── Section 3: How it works (Image + Text split) ── */}
       {!loading && exams.length > 0 && (
-        <section className="scroll-mt-16 snap-start lg:snap-always w-full lg:min-h-[calc(87vh-4rem)] flex flex-col justify-center px-4 py-8 lg:py-4 bg-[var(--bg-base)]">
+        <section className="scroll-mt-16 snap-start lg:snap-always w-full flex flex-col justify-center px-4 pb-10 bg-[var(--bg-base)]">
           <motion.div
             className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-[1fr_1.1fr] gap-8 lg:gap-16 items-center"
             variants={staggerContainer}
@@ -467,7 +467,7 @@ export default function Home() {
 
       {/* ── Section 4: CTA Banner ── */}
       {!user && !loading && exams.length > 0 && (
-        <section className="scroll-mt-16 snap-start lg:snap-always w-full min-h-[50vh] lg:min-h-[calc(100vh-4rem)] flex flex-col justify-center py-12 lg:py-16 px-4 pb-20">
+        <section className="scroll-mt-16 snap-start lg:snap-always w-full min-h-[50vh] lg:min-h-[calc(100vh-4rem)] flex flex-col justify-center py-10 px-4 pb-10">
           <motion.div
             className="max-w-5xl mx-auto w-full"
             variants={staggerContainer}
