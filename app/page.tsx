@@ -153,6 +153,7 @@ export default function Home() {
   return (
     <div className="w-full flex flex-col" style={{ background: "var(--bg-base)" }}>
       <style>{`
+        html, body { overflow-x: hidden }
         footer { scroll-snap-align: end; }
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -164,8 +165,8 @@ export default function Home() {
       `}</style>
 
       {/* ── Section 1: Hero ── */}
-      <section className="scroll-mt-16 snap-start snap-always min-h-[calc(100vh-4rem)] w-full flex flex-col relative overflow-hidden text-center lg:text-left z-10 pt-10 pb-8 lg:py-0">
-        <div className="absolute inset-0 pointer-events-none -z-10">
+      <section className="scroll-mt-16 snap-start lg:snap-always min-h-[100dvh] lg:min-h-[calc(100vh-4rem)] w-full flex flex-col relative text-center lg:text-left z-10 pt-16 pb-16 lg:pt-0 lg:pb-0 overflow-x-clip overflow-y-visible lg:overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none -z-10 overflow-hidden">
           <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse 80% 60% at 50% -10%, rgba(124,58,237,0.18) 0%, transparent 65%)" }} />
           <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.03) 1px, transparent 0)", backgroundSize: "40px 40px" }} />
         </div>
@@ -226,14 +227,14 @@ export default function Home() {
               </div>
 
               {/* Floating Badges */}
-              <motion.div animate={{ y: [0, -15, 0] }} transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }} className="absolute -top-8 sm:-top-8 -right-8 sm:-right-10 p-3 sm:p-5 rounded-3xl glass-panel z-20 flex items-center gap-3">
+              <motion.div animate={{ y: [0, -15, 0] }} transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }} className="absolute -top-8 sm:-top-8 -right-2 sm:-right-10 p-3 sm:p-5 rounded-3xl glass-panel z-20 flex items-center gap-3">
                 <div className="text-2xl sm:text-3xl">🎯</div>
                 <div>
                   <p className="text-white font-black text-sm sm:text-base tracking-tight">VSTEP 8.5+</p>
                   <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider mt-0.5">Mục tiêu đỗ</p>
                 </div>
               </motion.div>
-              <motion.div animate={{ y: [0, 15, 0] }} transition={{ repeat: Infinity, duration: 5, ease: "easeInOut", delay: 1 }} className="absolute -bottom-6 sm:-bottom-10 -left-8 sm:-left-10 p-3 sm:p-5 rounded-3xl glass-panel z-20 flex items-center gap-3">
+              <motion.div animate={{ y: [0, 15, 0] }} transition={{ repeat: Infinity, duration: 5, ease: "easeInOut", delay: 1 }} className="absolute -bottom-6 sm:-bottom-10 -left-2 sm:-left-10 p-3 sm:p-5 rounded-3xl glass-panel z-20 flex items-center gap-3">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-emerald-500/20 flex items-center justify-center">
                   <svg className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
                 </div>
