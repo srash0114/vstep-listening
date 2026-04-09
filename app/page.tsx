@@ -38,7 +38,9 @@ export default function Home() {
       .then((res) => {
         if (res.success) {
           const raw = res.data as any;
-          setExams(Array.isArray(raw) ? raw : raw?.exams || raw?.data || []);
+          let examsArr = Array.isArray(raw) ? raw : raw?.exams || raw?.data || [];
+          examsArr.sort((a: Exam, b: Exam) => a.id - b.id);
+          setExams(examsArr);
         } else {
           setError(res.message || t("Không tải được danh sách đề thi", "Failed to load exams"));
         }
@@ -423,23 +425,11 @@ function ExamCard({ exam, index }: { exam: Exam; index: number }) {
       style={{ animationDelay: `${index * 0.07}s` }}
     >
       <div
-        className="h-full rounded-3xl overflow-hidden transition-all duration-300 group-hover:-translate-y-1.5 group-hover:shadow-2xl flex flex-col"
-        style={{
-          background: "var(--bg-surface)",
-          border: "1px solid var(--border-subtle)",
-        }}
-        onMouseEnter={e => {
-          (e.currentTarget as HTMLElement).style.border = `1px solid ${lc.border}`;
-          (e.currentTarget as HTMLElement).style.boxShadow = `0 20px 50px rgba(0,0,0,0.35)`;
-        }}
-        onMouseLeave={e => {
-          (e.currentTarget as HTMLElement).style.border = "1px solid var(--border-subtle)";
-          (e.currentTarget as HTMLElement).style.boxShadow = "none";
-        }}
+        className="h-full rounded-3xl overflow-hidden transition-all duration-300 group-hover:-translate-y-1.5 flex flex-col group-hover:border-transparent"
+        onMouseEnter={ (e) => {e.currentTarget.style.boxShadow = `0 8px 16px ${lc.border}` ;e.currentTarget.style.border = `1px solid ${lc.border}` } }
+        onMouseLeave={ (e) => {e.currentTarget.style.boxShadow = `0 0 0 rgba(0,0,0,0), 0 0 0 rgba(0,0,0,0)` ;e.currentTarget.style.border = `1px solid var(--border-subtle)` } }
+        style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", boxShadow: `0 0 0 rgba(0,0,0,0), 0 0 0 rgba(0,0,0,0)`}}
       >
-        {/* Top accent */}
-        <div className="h-1.5 w-full" style={{ background: `linear-gradient(${lc.gradient})`, opacity: 0.8 }} />
-
         <div className="p-6 flex flex-col flex-1">
           {/* Header */}
           <div className="flex items-start justify-between gap-3 mb-5">
