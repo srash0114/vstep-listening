@@ -93,9 +93,10 @@ function formatTime(seconds: number) {
 
 // ==================== QuestionCard ====================
 function QuestionCard({
-  question, globalNumber, selected, onSelect, submitted,
+  question, globalNumber, selected, onSelect, submitted, audioTime, onAudioTimeUpdate
 }: {
   question: Question; globalNumber: number; selected?: number; onSelect: (optionId: number) => void; submitted: boolean;
+  audioTime?: number; onAudioTimeUpdate?: (time: number) => void;
 }) {
   const sortedOptions = [...(question.options || [])].sort((a, b) => a.option_label.localeCompare(b.option_label));
 
@@ -130,7 +131,12 @@ function QuestionCard({
           className="mb-4 p-3 rounded-xl"
           style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)" }}
         >
-          <CachedAudio src={question.audio_url} className="w-full h-9" />
+          <CachedAudio 
+            src={question.audio_url} 
+            className="w-full h-9" 
+            initialTime={audioTime}
+            onTimeUpdate={onAudioTimeUpdate ? (e) => onAudioTimeUpdate(e.currentTarget.currentTime) : undefined}
+          />
         </div>
       )}
 
@@ -210,6 +216,7 @@ export default function TestPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedPart, setSelectedPart] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
+  const audioProgressRef = useRef<Record<string, number>>({});
   const [submitted, setSubmitted] = useState(false);
   const [score, setScore] = useState<{ correct: number; total: number } | null>(null);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
@@ -362,6 +369,10 @@ export default function TestPage() {
     if (userExamId) {
       userExamsApi.saveAnswer(userExamId, questionId, optionId).catch(() => {});
     }
+  };
+
+  const handleAudioTimeUpdate = (src: string, time: number) => {
+    audioProgressRef.current[src] = time;
   };
 
   const handleSubmit = async () => {
@@ -801,7 +812,13 @@ export default function TestPage() {
                       <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--text-muted)" }}>
                         Audio Part
                       </p>
-                      <CachedAudio src={currentPart.audio_url} className="w-full h-10" />
+                      <CachedAudio 
+                        key={currentPart.audio_url}
+                        src={currentPart.audio_url} 
+                        className="w-full h-10" 
+                        initialTime={audioProgressRef.current[currentPart.audio_url] || 0}
+                        onTimeUpdate={(e) => handleAudioTimeUpdate(currentPart.audio_url!, e.currentTarget.currentTime)}
+                      />
                     </div>
                   )}
                 </div>
@@ -811,11 +828,14 @@ export default function TestPage() {
                   <div className="space-y-4">
                     {[...(currentPart.questions || [])].sort((a, b) => (a.question_number || 0) - (b.question_number || 0)).map((q) => (
                       <QuestionCard
-                        key={q.id} question={q}
+                        key={q.id + currentPart.audio_url!}
+                        question={q}
                         globalNumber={globalNumMap.get(q.id) ?? q.question_number}
                         selected={answers[q.id]}
                         onSelect={(optId) => handleAnswer(q.id, optId)}
                         submitted={submitted}
+                        audioTime={q.audio_url ? audioProgressRef.current[q.audio_url] : undefined}
+                        onAudioTimeUpdate={q.audio_url ? (time) => handleAudioTimeUpdate(q.audio_url!, time) : undefined}
                       />
                     ))}
                   </div>
@@ -858,18 +878,27 @@ export default function TestPage() {
                             </div>
                             {passage.audio_url && (
                               <div className="mt-3">
-                                <CachedAudio src={passage.audio_url} className="w-full h-10" />
+                                <CachedAudio 
+                                  key={passage.audio_url}
+                                  src={passage.audio_url} 
+                                  className="w-full h-10" 
+                                  initialTime={audioProgressRef.current[passage.audio_url] || 0}
+                                  onTimeUpdate={(e) => handleAudioTimeUpdate(passage.audio_url!, e.currentTarget.currentTime)}
+                                />
                               </div>
                             )}
                           </div>
                           <div className="p-5 space-y-4">
                             {passageQs.map((q) => (
                               <QuestionCard
-                                key={q.id} question={q}
+                                key={q.id + passage.audio_url!}
+                                question={q}
                                 globalNumber={globalNumMap.get(q.id) ?? q.question_number}
                                 selected={answers[q.id]}
                                 onSelect={(optId) => handleAnswer(q.id, optId)}
                                 submitted={submitted}
+                                audioTime={q.audio_url ? audioProgressRef.current[q.audio_url] : undefined}
+                                onAudioTimeUpdate={q.audio_url ? (time) => handleAudioTimeUpdate(q.audio_url!, time) : undefined}
                               />
                             ))}
                           </div>

@@ -67,6 +67,7 @@ export default function Home() {
   const { user } = useAuth();
   const sliderRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
+  const [isScrolldown, setIsScrolldown] = useState(false);
 
   const scrollLeft = () => {
     if (sliderRef.current) {
@@ -79,6 +80,21 @@ export default function Home() {
       sliderRef.current.scrollBy({ left: 360, behavior: "smooth" });
     }
   };
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolldown(window.scrollY > 280);
+    };
+
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // Custom wheel to horizontal scroll mapping
   useEffect(() => {
@@ -109,7 +125,7 @@ export default function Home() {
     return () => el.removeEventListener('wheel', onWheel);
   }, [exams]);
 
-  // Auto scroll every 3s
+  // Auto scroll every 5s
   useEffect(() => {
     if (isHovered || exams.length === 0) return;
     const interval = setInterval(() => {
@@ -171,7 +187,7 @@ export default function Home() {
           <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.03) 1px, transparent 0)", backgroundSize: "40px 40px" }} />
         </div>
 
-        <div className="flex-1 flex flex-col justify-center items-center w-full px-4 sm:px-8 pt-10 pb-0 sm:pb-10">
+        <div className="flex-1 flex flex-col justify-center items-center w-full px-4 sm:px-8 py-10">
           <motion.div
             className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center"
             variants={staggerContainer}
@@ -504,6 +520,43 @@ export default function Home() {
             </motion.div>
           </motion.div>
         </section>
+      )}
+
+      {/* Btn to scroll back to top */}
+      {isScrolldown && (
+        <motion.div
+          initial={{ opacity: 0, y: 30, scale: 0.8 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ type: "spring", stiffness: 350, damping: 25 }}
+          className="fixed bottom-6 right-6 sm:bottom-10 sm:right-10 z-50 group"
+        >
+          {/* Animated glow ring behind the button */}
+          <div className="absolute -inset-2 rounded-full bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-400 opacity-0 group-hover:opacity-75 blur-lg transition-all duration-500 group-hover:animate-pulse" />
+          
+          <motion.button
+            whileHover={{ y: -4, scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={scrollToTop}
+            className="relative flex items-center justify-center w-12 h-12 lg:w-14 lg:h-14 rounded-full text-white shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white/20 focus:outline-none overflow-hidden"
+            aria-label="Scroll to top"
+          >
+            {/* Default background (dark glass) */}
+            <div className="absolute inset-0 bg-[#0f172a]/80 backdrop-blur-xl transition-opacity duration-500 group-hover:opacity-0" />
+            
+            {/* Hover background (vibrant gradient) */}
+            <div className="absolute inset-0 bg-gradient-to-tr from-[#7c3aed] via-[#d946ef] to-[#06b6d4] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            
+            {/* Inner highlight for 3D effect */}
+            <div className="absolute inset-0 rounded-full border-[1.5px] border-white/10 group-hover:border-white/30 transition-colors duration-300" />
+            
+            {/* Icon Container */}
+            <div className="relative z-10 flex flex-col items-center justify-center transition-transform duration-300 group-hover:-translate-y-1">
+              <svg className="w-5 h-5 lg:w-6 lg:h-6 text-white drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+              </svg>
+            </div>
+          </motion.button>
+        </motion.div>
       )}
     </div>
   );
