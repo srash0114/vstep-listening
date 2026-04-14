@@ -131,9 +131,9 @@ function QuestionCard({
           className="mb-4 p-3 rounded-xl"
           style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)" }}
         >
-          <CachedAudio 
-            src={question.audio_url} 
-            className="w-full h-9" 
+          <CachedAudio
+            src={question.audio_url}
+            className="w-full h-9"
             initialTime={audioTime}
             onTimeUpdate={onAudioTimeUpdate ? (e) => onAudioTimeUpdate(e.currentTarget.currentTime) : undefined}
           />
@@ -234,6 +234,13 @@ export default function TestPage() {
   const totalDurationRef = useRef<number>(0);
   const submittedRef = useRef(false);
   const { user, isLoading: authLoading } = useAuth();
+  const [isAudioSticky, setIsAudioSticky] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setIsAudioSticky(window.scrollY > 20);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // Keep refs in sync
   useEffect(() => { answersRef.current = answers; }, [answers]);
@@ -355,7 +362,7 @@ export default function TestPage() {
             selected_option_id: optId,
           })),
         });
-      } catch {}
+      } catch { }
     }
     router.push("/");
   };
@@ -367,7 +374,7 @@ export default function TestPage() {
     if (submitted) return;
     setAnswers((prev) => ({ ...prev, [questionId]: optionId }));
     if (userExamId) {
-      userExamsApi.saveAnswer(userExamId, questionId, optionId).catch(() => {});
+      userExamsApi.saveAnswer(userExamId, questionId, optionId).catch(() => { });
     }
   };
 
@@ -390,7 +397,7 @@ export default function TestPage() {
         setScore({ correct: d.correct_answers, total: d.total_questions });
         try {
           sessionStorage.setItem(`review_${examId}`, JSON.stringify({ userExamId, timeSpent: d.time_spent }));
-        } catch {}
+        } catch { }
       } catch {
         setScore({ correct: 0, total: orderedQuestions.length });
       }
@@ -535,8 +542,8 @@ export default function TestPage() {
               {isExcellent
                 ? t("Xuất sắc! Bạn đã làm rất tốt.", "Excellent! You did great.")
                 : isGood
-                ? t("Khá tốt! Tiếp tục cố gắng.", "Good job! Keep it up.")
-                : t("Cần luyện tập thêm!", "Needs more practice!")}
+                  ? t("Khá tốt! Tiếp tục cố gắng.", "Good job! Keep it up.")
+                  : t("Cần luyện tập thêm!", "Needs more practice!")}
             </p>
 
             {/* Stats */}
@@ -571,7 +578,7 @@ export default function TestPage() {
                   try {
                     const startRes = await userExamsApi.start(examId);
                     setUserExamId(startRes?.data?.id ?? null);
-                  } catch {}
+                  } catch { }
                   setSubmitted(false); setAnswers({}); setSelectedPart(0); setScore(null);
                   setTimeLeft(exam.total_duration ? exam.total_duration * 60
                     : (exam.parts || []).reduce((s: number, p: Part) => s + (p.duration || 0), 0) || null);
@@ -597,9 +604,9 @@ export default function TestPage() {
 
       {/* ── Fixed top bar ── */}
       <div
-        className="fixed top-0 left-0 right-0 z-50"
+        className="fixed left-0 right-0 z-50"
         style={{
-          background: "rgba(8,12,20,0.92)",
+          background: "color-mix(in srgb, var(--bg-base) 92%, transparent)",
           backdropFilter: "blur(20px)",
           borderBottom: "1px solid var(--border-subtle)",
         }}
@@ -808,17 +815,32 @@ export default function TestPage() {
                   </div>
 
                   {currentPart.audio_url && (
-                    <div className="mt-4 p-3 rounded-xl" style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)" }}>
-                      <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--text-muted)" }}>
-                        Audio Part
-                      </p>
-                      <CachedAudio 
-                        key={currentPart.audio_url}
-                        src={currentPart.audio_url} 
-                        className="w-full h-10" 
-                        initialTime={audioProgressRef.current[currentPart.audio_url] || 0}
-                        onTimeUpdate={(e) => handleAudioTimeUpdate(currentPart.audio_url!, e.currentTarget.currentTime)}
-                      />
+                    <div className="mt-4 relative" style={{ height: isAudioSticky ? "fit-content" : "86px" }}>
+                      <div
+                        className={`w-full p-3 rounded-2xl transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${isAudioSticky
+                          ? "fixed bottom-6 left-1/2 -translate-x-1/2 w-[95%] sm:w-[500px] max-w-[90vw] z-[100] shadow-2xl backdrop-blur-xl"
+                          : "absolute inset-0 z-10"
+                          }`}
+                        style={
+                          isAudioSticky
+                            ? { background: "rgba(30,41,59,0.85)", border: "1px solid rgba(124,58,237,0.4)" }
+                            : { background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)" }
+                        }
+                      >
+                        <p
+                          className={`text-[10px] font-bold uppercase tracking-widest mb-2 transition-colors duration-700 ${isAudioSticky ? "text-[#a78bfa]" : ""}`}
+                          style={{ color: "var(--text-muted)" }}
+                        >
+                          Audio Part
+                        </p>
+                        <CachedAudio
+                          key={currentPart.audio_url}
+                          src={currentPart.audio_url}
+                          className="w-full h-10"
+                          initialTime={audioProgressRef.current[currentPart.audio_url] || 0}
+                          onTimeUpdate={(e) => handleAudioTimeUpdate(currentPart.audio_url!, e.currentTarget.currentTime)}
+                        />
+                      </div>
                     </div>
                   )}
                 </div>
@@ -878,10 +900,10 @@ export default function TestPage() {
                             </div>
                             {passage.audio_url && (
                               <div className="mt-3">
-                                <CachedAudio 
+                                <CachedAudio
                                   key={passage.audio_url}
-                                  src={passage.audio_url} 
-                                  className="w-full h-10" 
+                                  src={passage.audio_url}
+                                  className="w-full h-10"
                                   initialTime={audioProgressRef.current[passage.audio_url] || 0}
                                   onTimeUpdate={(e) => handleAudioTimeUpdate(passage.audio_url!, e.currentTarget.currentTime)}
                                 />
@@ -1063,11 +1085,11 @@ export default function TestPage() {
             <h2 className="text-xl font-black text-center mb-2" style={{ color: "var(--text-primary)" }}>
               {tx("confirmSubmission")}
             </h2>
-            
+
             <p className="text-center text-sm mb-1" style={{ color: "var(--text-secondary)" }}>
               {tx("youHave")} <span className="font-bold" style={{ color: "#f59e0b" }}>{unansweredForConfirm}</span> {tx("unansweredQuestions")}
             </p>
-            
+
             <p className="text-center text-xs mb-6" style={{ color: "var(--text-muted)" }}>
               {tx("doYouWantToSubmit")}
             </p>

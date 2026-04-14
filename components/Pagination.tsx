@@ -16,7 +16,10 @@ export default function Pagination({
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
-        className="px-4 py-2 bg-gray-300 text-gray-700 rounded disabled:opacity-50 hover:bg-gray-400"
+        className="px-4 py-2 rounded disabled:opacity-50 transition-all"
+        style={{ background: "var(--bg-elevated)", color: "var(--text-secondary)", border: "1px solid var(--border-default)" }}
+        onMouseEnter={e => { if (!e.currentTarget.disabled) (e.currentTarget as HTMLElement).style.background = "var(--bg-overlay)"; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-elevated)"; }}
       >
         Previous
       </button>
@@ -25,11 +28,14 @@ export default function Pagination({
         <button
           key={page}
           onClick={() => onPageChange(page)}
-          className={`px-4 py-2 rounded ${
+          className="px-4 py-2 rounded transition-all"
+          style={
             page === currentPage
-              ? "bg-blue-600 text-white"
-              : "bg-gray-300 text-gray-700 hover:bg-gray-400"
-          }`}
+              ? { background: "var(--accent-violet)", color: "#fff", border: "1px solid var(--accent-violet)" }
+              : { background: "var(--bg-elevated)", color: "var(--text-secondary)", border: "1px solid var(--border-default)" }
+          }
+          onMouseEnter={e => { if (page !== currentPage) (e.currentTarget as HTMLElement).style.background = "var(--bg-overlay)"; }}
+          onMouseLeave={e => { if (page !== currentPage) (e.currentTarget as HTMLElement).style.background = "var(--bg-elevated)"; }}
         >
           {page}
         </button>
@@ -38,7 +44,10 @@ export default function Pagination({
       <button
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
-        className="px-4 py-2 bg-gray-300 text-gray-700 rounded disabled:opacity-50 hover:bg-gray-400"
+        className="px-4 py-2 rounded disabled:opacity-50 transition-all"
+        style={{ background: "var(--bg-elevated)", color: "var(--text-secondary)", border: "1px solid var(--border-default)" }}
+        onMouseEnter={e => { if (!e.currentTarget.disabled) (e.currentTarget as HTMLElement).style.background = "var(--bg-overlay)"; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-elevated)"; }}
       >
         Next
       </button>

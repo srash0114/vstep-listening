@@ -278,11 +278,11 @@ export default function CreateQuestionPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-24 pb-12">
+    <div className="min-h-screen pt-24 pb-12" style={{ background: "var(--bg-base)" }}>
       <div className="max-w-4xl mx-auto px-4">
-        <div className="bg-white rounded-lg shadow-lg p-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Batch Questions</h1>
-          <p className="text-gray-600 mb-8">Create multiple questions for a specific test part</p>
+        <div className="rounded-lg shadow-lg p-8" style={{ background: "var(--bg-surface)" }}>
+          <h1 className="text-3xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>Create Batch Questions</h1>
+          <p className="mb-8" style={{ color: "var(--text-secondary)" }}>Create multiple questions for a specific test part</p>
 
           {alert && (
             <Alert
@@ -294,15 +294,16 @@ export default function CreateQuestionPage() {
 
           <form onSubmit={handleSubmit} className="space-y-8">
             {/* Test & Part Selection */}
-            <div className="border-b pb-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Select Test & Part</h2>
+            <div className="border-b pb-6" style={{ borderColor: "var(--border-subtle)" }}>
+              <h2 className="text-lg font-bold mb-4" style={{ color: "var(--text-primary)" }}>Select Test & Part</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Select Test *</label>
+                  <label className="block text-sm font-medium mb-2" style={{ color: "var(--text-secondary)" }}>Select Test *</label>
                   <select
                     value={testId}
                     onChange={(e) => setTestId(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 rounded-lg focus:ring-2 focus:ring-violet-500 focus:outline-none"
+                    style={{ background: "var(--bg-surface)", color: "var(--text-primary)", border: "1px solid var(--border-default)" }}
                     required
                   >
                     <option value="">-- Select a test --</option>
@@ -315,12 +316,13 @@ export default function CreateQuestionPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Select Part *</label>
+                  <label className="block text-sm font-medium mb-2" style={{ color: "var(--text-secondary)" }}>Select Part *</label>
                   <select
                     value={partId}
                     onChange={(e) => setPartId(e.target.value)}
                     disabled={!testId}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                    className="w-full px-4 py-2 rounded-lg focus:ring-2 focus:ring-violet-500 focus:outline-none disabled:opacity-50"
+                    style={{ background: "var(--bg-surface)", color: "var(--text-primary)", border: "1px solid var(--border-default)" }}
                     required
                   >
                     <option value="">-- Select a part --</option>
@@ -337,7 +339,7 @@ export default function CreateQuestionPage() {
             {/* Questions */}
             <div>
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-bold text-gray-900">Questions ({questions.length})</h2>
+                <h2 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>Questions ({questions.length})</h2>
                 <button
                   type="button"
                   onClick={addQuestion}
@@ -349,9 +351,9 @@ export default function CreateQuestionPage() {
 
               <div className="space-y-6">
                 {questions.map((question, qIndex) => (
-                  <div key={qIndex} className="border rounded-lg p-6 bg-gray-50">
+                  <div key={qIndex} className="rounded-lg p-6" style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)" }}>
                     <div className="flex justify-between items-center mb-4">
-                      <h3 className="font-bold text-gray-900">Question {qIndex + 1}</h3>
+                      <h3 className="font-bold" style={{ color: "var(--text-primary)" }}>Question {qIndex + 1}</h3>
                       {questions.length > 1 && (
                         <button
                           type="button"
@@ -408,11 +410,12 @@ export default function CreateQuestionPage() {
                     {/* Correct Answer & Script */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Correct Answer *</label>
+                        <label className="block text-sm font-medium mb-2" style={{ color: "var(--text-secondary)" }}>Correct Answer *</label>
                         <select
                           value={question.correctAnswer}
                           onChange={(e) => updateQuestion(qIndex, "correctAnswer", e.target.value)}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                          className="w-full px-4 py-2 rounded-lg focus:ring-2 focus:ring-violet-500 focus:outline-none"
+                          style={{ background: "var(--bg-surface)", color: "var(--text-primary)", border: "1px solid var(--border-default)" }}
                           required
                         >
                           <option value="">Select answer</option>

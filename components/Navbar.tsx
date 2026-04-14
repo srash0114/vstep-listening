@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useLang } from "@/lib/lang";
+import { useTheme } from "@/lib/theme-context";
 import { usersApi } from "@/lib/api";
 import Avatar from "@/components/Avatar";
 
@@ -16,6 +17,7 @@ export default function Navbar() {
   const [quickLoginOpen, setQuickLoginOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { lang, toggle: toggleLang } = useLang();
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -65,10 +67,10 @@ export default function Navbar() {
       <nav
         className="fixed top-0 w-full z-50 transition-all duration-300"
         style={{
-          background: scrolled ? "rgba(8, 12, 20, 0.92)" : "rgba(8, 12, 20, 0.75)",
+          background: scrolled ? "color-mix(in srgb, var(--bg-base) 92%, transparent)" : "color-mix(in srgb, var(--bg-base) 75%, transparent)",
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
-          borderBottom: `1px solid ${scrolled ? "rgba(148,163,184,0.12)" : "rgba(148,163,184,0.06)"}`,
+          borderBottom: `1px solid ${scrolled ? "var(--border-default)" : "var(--border-subtle)"}`,
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
@@ -88,6 +90,34 @@ export default function Navbar() {
           {/* Right section */}
           <div className="flex items-center gap-2">
 
+            {/* Theme toggle */}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-200"
+              style={{ background: "transparent", border: "1px solid var(--border-subtle)", color: "var(--text-muted)" }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLElement).style.borderColor = "var(--border-default)";
+                (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)";
+                (e.currentTarget as HTMLElement).style.background = "var(--bg-overlay)";
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLElement).style.borderColor = "var(--border-subtle)";
+                (e.currentTarget as HTMLElement).style.color = "var(--text-muted)";
+                (e.currentTarget as HTMLElement).style.background = "transparent";
+              }}
+            >
+              {theme === "dark" ? (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+              )}
+            </button>
+
             {/* Language toggle */}
             <button
               type="button"
@@ -97,7 +127,7 @@ export default function Navbar() {
               onMouseEnter={e => {
                 (e.currentTarget as HTMLElement).style.borderColor = "var(--border-default)";
                 (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)";
-                (e.currentTarget as HTMLElement).style.background = "rgba(148,163,184,0.06)";
+                (e.currentTarget as HTMLElement).style.background = "var(--bg-overlay)";
               }}
               onMouseLeave={e => {
                 (e.currentTarget as HTMLElement).style.borderColor = "var(--border-subtle)";
@@ -118,12 +148,12 @@ export default function Navbar() {
                   onClick={() => setDropdownOpen((v) => !v)}
                   className="flex items-center gap-2.5 pl-1 pr-3 py-1.5 rounded-xl transition-all duration-200"
                   style={{
-                    background: dropdownOpen ? "rgba(124, 58, 237, 0.12)" : "transparent",
-                    border: `1px solid ${dropdownOpen ? "rgba(124, 58, 237, 0.3)" : "transparent"}`,
+                    background: dropdownOpen ? "color-mix(in srgb, var(--accent-violet) 12%, transparent)" : "transparent",
+                    border: `1px solid ${dropdownOpen ? "color-mix(in srgb, var(--accent-violet) 30%, transparent)" : "transparent"}`,
                   }}
                   onMouseEnter={e => {
                     if (!dropdownOpen) {
-                      (e.currentTarget as HTMLElement).style.background = "rgba(148, 163, 184, 0.06)";
+                      (e.currentTarget as HTMLElement).style.background = "var(--bg-overlay)";
                       (e.currentTarget as HTMLElement).style.borderColor = "var(--border-default)";
                     }
                   }}
@@ -154,7 +184,7 @@ export default function Navbar() {
                     style={{
                       background: "var(--bg-elevated)",
                       border: "1px solid var(--border-strong)",
-                      boxShadow: "0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(124,58,237,0.1)",
+                      boxShadow: "0 20px 40px rgba(0,0,0,0.2), 0 0 0 1px var(--glow-violet)",
                     }}
                   >
                     <div className="px-4 py-3" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
@@ -166,7 +196,11 @@ export default function Navbar() {
 
                     {[
                       {
-                        href: "/", label: lang === "vi" ? "Đề thi" : "Tests",
+                        href: "/", label: lang === "vi" ? "Trang chủ" : "Home",
+                        icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                      },
+                      {
+                        href: "/exams", label: lang === "vi" ? "Đề thi" : "Tests",
                         icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                       },
                       {
@@ -194,7 +228,7 @@ export default function Navbar() {
                         className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors"
                         style={{ color: "var(--text-secondary)" }}
                         onMouseEnter={e => {
-                          (e.currentTarget as HTMLElement).style.background = "rgba(148,163,184,0.06)";
+                          (e.currentTarget as HTMLElement).style.background = "var(--bg-overlay)";
                           (e.currentTarget as HTMLElement).style.color = "var(--text-primary)";
                         }}
                         onMouseLeave={e => {
@@ -213,7 +247,7 @@ export default function Navbar() {
                         className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors"
                         style={{ color: "var(--text-secondary)" }}
                         onMouseEnter={e => {
-                          (e.currentTarget as HTMLElement).style.background = "rgba(148,163,184,0.06)";
+                          (e.currentTarget as HTMLElement).style.background = "var(--bg-overlay)";
                           (e.currentTarget as HTMLElement).style.color = "var(--text-primary)";
                         }}
                         onMouseLeave={e => {
@@ -230,8 +264,8 @@ export default function Navbar() {
                       <button
                         onClick={handleLogout}
                         className="flex items-center gap-3 w-full px-4 py-2.5 text-sm transition-colors text-left"
-                        style={{ color: "#f43f5e" }}
-                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(244,63,94,0.08)"}
+                        style={{ color: "var(--accent-rose)" }}
+                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "color-mix(in srgb, var(--accent-rose) 8%, transparent)"}
                         onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}
                       >
                         <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -254,7 +288,7 @@ export default function Navbar() {
                     border: "1px solid var(--border-default)",
                     color: "var(--text-primary)",
                   }}
-                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,58,237,0.4)"}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = "var(--accent-violet)"}
                   onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = "var(--border-default)"}
                 >
                   <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
@@ -271,7 +305,7 @@ export default function Navbar() {
                   style={{ color: "var(--text-muted)" }}
                   onMouseEnter={e => {
                     (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)";
-                    (e.currentTarget as HTMLElement).style.background = "rgba(148,163,184,0.08)";
+                    (e.currentTarget as HTMLElement).style.background = "var(--bg-overlay)";
                   }}
                   onMouseLeave={e => {
                     (e.currentTarget as HTMLElement).style.color = "var(--text-muted)";
@@ -286,21 +320,26 @@ export default function Navbar() {
             ) : (
               /* Login / Register buttons */
               <>
-                <Link
-                  href="/login"
-                  className="text-sm font-medium px-2 py-2 rounded-xl transition-all duration-200"
-                  style={{ border: "1px solid var(--border-default)", color: "var(--text-secondary)" }}
+                <button
+                  type="button"
+                  onClick={() => setQuickLoginOpen(true)}
+                  className="px-3 py-2 text-sm font-semibold transition-all duration-200 rounded-xl"
+                  style={{
+                    border: "1px solid var(--border-subtle)",
+                    color: "var(--text-primary)",
+                    background: "transparent"
+                  }}
                   onMouseEnter={e => {
-                    (e.currentTarget as HTMLElement).style.color = "var(--text-primary)";
-                    (e.currentTarget as HTMLElement).style.background = "rgba(148,163,184,0.06)";
+                    (e.currentTarget as HTMLElement).style.background = "var(--bg-overlay)";
+                    (e.currentTarget as HTMLElement).style.borderColor = "var(--border-default)";
                   }}
                   onMouseLeave={e => {
-                    (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)";
                     (e.currentTarget as HTMLElement).style.background = "transparent";
+                    (e.currentTarget as HTMLElement).style.borderColor = "var(--border-subtle)";
                   }}
                 >
                   {lang === "vi" ? "Đăng nhập" : "Sign in"}
-                </Link>
+                </button>
                 <Link
                   href="/register"
                   className="px-4 py-2 text-sm font-semibold rounded-xl text-white transition-all duration-200 hover:opacity-90 hover:scale-[1.02] sm:inline-block hidden"

@@ -1,6 +1,35 @@
 @import "tailwindcss";
 
 :root {
+  /* Light mode (default) */
+  --bg-base: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-elevated: #f1f5f9;
+  --bg-overlay: #e2e8f0;
+  --border-subtle: rgba(15, 23, 42, 0.08);
+  --border-default: rgba(15, 23, 42, 0.12);
+  --border-strong: rgba(15, 23, 42, 0.2);
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  /* Text on glass panels / gradient banners */
+  --text-on-glass: #1e293b;
+  --text-on-glass-muted: #475569;
+  --border-glass: rgba(15, 23, 42, 0.1);
+  --bg-glass: rgba(255, 255, 255, 0.75);
+  --bg-glass-hover: rgba(255, 255, 255, 0.9);
+  --accent-violet: #7c3aed;
+  --accent-violet-light: #8b5cf6;
+  --accent-cyan: #06b6d4;
+  --accent-cyan-light: #22d3ee;
+  --accent-emerald: #10b981;
+  --accent-rose: #f43f5e;
+  --glow-violet: rgba(124, 58, 237, 0.25);
+  --glow-cyan: rgba(6, 182, 212, 0.15);
+}
+
+.dark {
+  /* Dark mode */
   --bg-base: #080c14;
   --bg-surface: #0e1420;
   --bg-elevated: #141b2d;
@@ -11,6 +40,12 @@
   --text-primary: #f1f5f9;
   --text-secondary: #94a3b8;
   --text-muted: #475569;
+  /* Text on glass panels / gradient banners */
+  --text-on-glass: #f1f5f9;
+  --text-on-glass-muted: #94a3b8;
+  --border-glass: rgba(255, 255, 255, 0.08);
+  --bg-glass: rgba(20, 27, 45, 0.7);
+  --bg-glass-hover: rgba(26, 34, 53, 0.85);
   --accent-violet: #7c3aed;
   --accent-violet-light: #8b5cf6;
   --accent-cyan: #06b6d4;
@@ -82,6 +117,14 @@ body {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--border-default);
+}
+
+/* Theme-aware glass panel - works in both light and dark mode */
+.glass-panel {
+  background: var(--bg-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-glass);
 }
 
 .glass-strong {
@@ -173,8 +216,8 @@ input[type="range"] {
   accent-color: var(--accent-violet);
 }
 
-/* Audio player override */
-audio {
+/* Audio player override — only invert in dark mode */
+.dark audio {
   filter: invert(1) hue-rotate(180deg);
   opacity: 0.85;
 }

@@ -21,9 +21,9 @@ export default function Textarea({
 }: TextareaProps) {
   return (
     <div className="mb-4">
-      <label className="block text-gray-700 font-semibold mb-2">
+      <label className="block font-semibold mb-2" style={{ color: "var(--text-secondary)" }}>
         {label}
-        {required && <span className="text-red-600">*</span>}
+        {required && <span className="text-red-500">*</span>}
       </label>
       <textarea
         name={name}
@@ -31,11 +31,16 @@ export default function Textarea({
         onChange={onChange}
         placeholder={placeholder}
         rows={rows}
-        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-          error ? "border-red-500" : "border-gray-300"
+        className={`w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 transition-shadow ${
+          error ? "border-red-500" : ""
         }`}
+        style={{
+          background: "var(--bg-surface)",
+          color: "var(--text-primary)",
+          border: `1px solid ${error ? "#ef4444" : "var(--border-default)"}`,
+        }}
       />
-      {error && <p className="text-red-600 text-sm mt-1">{error}</p>}
+      {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
     </div>
   );
 }

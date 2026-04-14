@@ -223,18 +223,18 @@ export default function CreateCompleteTestPage() {
   const currentPartData = parts.find((p) => p.partNumber === currentPart);
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-24 pb-12">
+    <div className="min-h-screen pt-24 pb-12" style={{ background: "var(--bg-base)" }}>
       <div className="max-w-4xl mx-auto px-4">
-        <div className="bg-white rounded-lg shadow-lg p-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Complete VSTEP Test</h1>
-          <p className="text-gray-600 mb-8">Create a test with all parts, audio files, and questions</p>
+        <div className="rounded-lg shadow-lg p-8" style={{ background: "var(--bg-surface)" }}>
+          <h1 className="text-3xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>Create Complete VSTEP Test</h1>
+          <p className="mb-8" style={{ color: "var(--text-secondary)" }}>Create a test with all parts, audio files, and questions</p>
 
           {alert && <Alert type={alert.type} message={alert.message} onClose={() => setAlert(null)} />}
 
           <form onSubmit={handleSubmit} className="space-y-8">
             {/* Test Info */}
-            <div className="border-b pb-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Test Information</h2>
+            <div className="border-b pb-6" style={{ borderColor: "var(--border-subtle)" }}>
+              <h2 className="text-xl font-bold mb-4" style={{ color: "var(--text-primary)" }}>Test Information</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormInput
                   label="Test Title"
@@ -244,12 +244,13 @@ export default function CreateCompleteTestPage() {
                   required
                 />
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Level</label>
+                  <label className="block text-sm font-medium mb-2" style={{ color: "var(--text-secondary)" }}>Level</label>
                   <select
                     name="level"
                     value={testInfo.level}
                     onChange={handleTestInfoChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 rounded-lg focus:ring-2 focus:ring-violet-500 focus:outline-none"
+                    style={{ background: "var(--bg-surface)", color: "var(--text-primary)", border: "1px solid var(--border-default)" }}
                   >
                     <option value="A1">A1 (Elementary)</option>
                     <option value="A2">A2 (Elementary)</option>
@@ -277,11 +278,11 @@ export default function CreateCompleteTestPage() {
                   key={part.partNumber}
                   type="button"
                   onClick={() => setCurrentPart(part.partNumber)}
-                  className={`px-4 py-2 rounded-lg font-medium transition ${
-                    currentPart === part.partNumber
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                  }`}
+                  className="px-4 py-2 rounded-lg font-medium transition"
+                  style={currentPart === part.partNumber
+                    ? { background: "var(--accent-violet)", color: "#fff" }
+                    : { background: "var(--bg-elevated)", color: "var(--text-secondary)", border: "1px solid var(--border-default)" }
+                  }
                 >
                   Part {part.partNumber}
                 </button>
@@ -290,22 +291,23 @@ export default function CreateCompleteTestPage() {
 
             {/* Current Part */}
             {currentPartData && (
-              <div className="border-b pb-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-2">
+              <div className="border-b pb-6" style={{ borderColor: "var(--border-subtle)" }}>
+                <h2 className="text-xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>
                   Part {currentPartData.partNumber}: {currentPartData.title}
                 </h2>
-                <p className="text-gray-600 mb-4">{currentPartData.description}</p>
+                <p className="mb-4" style={{ color: "var(--text-muted)" }}>{currentPartData.description}</p>
 
                 {/* Audio Upload */}
                 <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium mb-2" style={{ color: "var(--text-secondary)" }}>
                     Audio File (mp3, wav, ogg, webm) - Max 10MB *
                   </label>
                   <input
                     type="file"
                     accept="audio/*"
                     onChange={(e) => handleAudioChange(currentPartData.partNumber, e.target.files?.[0] || null)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-4 py-2 rounded-lg"
+                    style={{ background: "var(--bg-surface)", color: "var(--text-primary)", border: "1px solid var(--border-default)" }}
                     required
                   />
                   {currentPartData.audioFileName && (
@@ -316,11 +318,12 @@ export default function CreateCompleteTestPage() {
                 {/* Questions */}
                 <div>
                   <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-bold text-gray-900">Questions</h3>
+                    <h3 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>Questions</h3>
                     <button
                       type="button"
                       onClick={() => addQuestion(currentPartData.partNumber)}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      className="px-4 py-2 rounded-lg font-medium transition"
+                      style={{ background: "var(--accent-violet)", color: "#fff" }}
                     >
                       + Add Question
                     </button>
@@ -329,9 +332,9 @@ export default function CreateCompleteTestPage() {
                   {currentPartData.questions.length > 0 ? (
                     <div className="space-y-6">
                       {currentPartData.questions.map((question, qIndex) => (
-                        <div key={qIndex} className="border rounded-lg p-4 bg-gray-50">
+                        <div key={qIndex} className="rounded-lg p-4" style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)" }}>
                           <div className="flex justify-between items-center mb-4">
-                            <h4 className="font-semibold text-gray-900">Question {question.questionNumber}</h4>
+                            <h4 className="font-semibold" style={{ color: "var(--text-primary)" }}>Question {question.questionNumber}</h4>
                           </div>
 
                           <FormInput
@@ -386,13 +389,14 @@ export default function CreateCompleteTestPage() {
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">Correct Answer *</label>
+                              <label className="block text-sm font-medium mb-2" style={{ color: "var(--text-secondary)" }}>Correct Answer *</label>
                               <select
                                 value={question.correctAnswer}
                                 onChange={(e) =>
                                   updateQuestion(currentPartData.partNumber, qIndex, "correctAnswer", e.target.value)
                                 }
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                                className="w-full px-4 py-2 rounded-lg focus:ring-2 focus:ring-violet-500 focus:outline-none"
+                                style={{ background: "var(--bg-surface)", color: "var(--text-primary)", border: "1px solid var(--border-default)" }}
                                 required
                               >
                                 <option value="">Select answer</option>
@@ -416,7 +420,7 @@ export default function CreateCompleteTestPage() {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-gray-500 text-center py-8">No questions yet. Click "+ Add Question" to start.</p>
+                    <p className="text-center py-8" style={{ color: "var(--text-muted)" }}>No questions yet. Click "+ Add Question" to start.</p>
                   )}
                 </div>
               </div>
@@ -427,7 +431,10 @@ export default function CreateCompleteTestPage() {
               <button
                 type="button"
                 onClick={() => router.back()}
-                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50"
+                className="px-6 py-2 rounded-lg font-medium transition-all"
+                style={{ border: "1px solid var(--border-default)", color: "var(--text-secondary)", background: "transparent" }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--bg-elevated)"}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}
               >
                 Cancel
               </button>
